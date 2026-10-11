@@ -221,7 +221,7 @@ function LoginForm() {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+            <form onSubmit={handleSubmit} action="#" method="post" className="space-y-4" noValidate>
               <div>
                 <label
                   htmlFor="login-email"

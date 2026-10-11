@@ -4,52 +4,72 @@
  * Does not make any Firebase SDK calls during evaluation.
  */
 
-export const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain:
-    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'geetha-coaching.firebaseapp.com',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'geetha-coaching',
-  storageBucket:
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'geetha-coaching.appspot.com',
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
-};
+// Support both standard NEXT_PUBLIC_ prefixes and Vercel project environment aliases
+const resolvedApiKey =
+  process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+  process.env.FIREBASE_API_KEY ||
+  '';
+
+const resolvedAuthDomain =
+  process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
+  process.env.FIREBASE_AUTH_DOMAIN ||
+  'geetha-coaching.firebaseapp.com';
+
+const resolvedProjectId =
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+  process.env.FIREBASE_PROJECT_ID ||
+  'geetha-coaching';
+
+const resolvedStorageBucket =
+  process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
+  process.env.FIREBASE_STORAGE_BUCKET ||
+  'geetha-coaching.appspot.com';
+
+const resolvedMessagingSenderId =
+  process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ||
+  process.env.FIREBASE_MESSAGING_SENDER_ID ||
+  '';
+
+const resolvedAppId =
+  process.env.NEXT_PUBLIC_FIREBASE_APP_ID ||
+  process.env.FIREBASE_APP_ID ||
+  '';
 
 export const isFirebaseClientConfigured: boolean = Boolean(
-  process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
-    !process.env.NEXT_PUBLIC_FIREBASE_API_KEY.includes('placeholder') &&
-    !process.env.NEXT_PUBLIC_FIREBASE_API_KEY.includes('your_')
+  resolvedApiKey &&
+    !resolvedApiKey.includes('placeholder') &&
+    !resolvedApiKey.includes('your_')
 );
+
+// Fallback placeholder with standard API key format to ensure getAuth() can initialize
+// safely during Next.js App Router build-time page-data collection when env vars are absent.
+const safeApiKeyForInit = isFirebaseClientConfigured
+  ? resolvedApiKey
+  : (resolvedApiKey || 'AIzaSyPlaceholderClientKeyForBuildOnly000');
+
+export const firebaseConfig = {
+  apiKey: safeApiKeyForInit,
+  authDomain: resolvedAuthDomain,
+  projectId: resolvedProjectId,
+  storageBucket: resolvedStorageBucket,
+  messagingSenderId: resolvedMessagingSenderId,
+  appId: resolvedAppId,
+};
 
 export function getMissingClientEnvVars(): string[] {
   const missing: string[] = [];
   if (
-    !process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
-    process.env.NEXT_PUBLIC_FIREBASE_API_KEY.includes('placeholder') ||
-    process.env.NEXT_PUBLIC_FIREBASE_API_KEY.includes('your_')
+    !resolvedApiKey ||
+    resolvedApiKey.includes('placeholder') ||
+    resolvedApiKey.includes('your_')
   ) {
     missing.push('NEXT_PUBLIC_FIREBASE_API_KEY');
   }
-  if (!process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID) {
+  if (!resolvedProjectId) {
     missing.push('NEXT_PUBLIC_FIREBASE_PROJECT_ID');
   }
-  if (!process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN) {
+  if (!resolvedAuthDomain) {
     missing.push('NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN');
-  }
-  if (!process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
-    missing.push('NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET');
-  }
-  if (
-    !process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ||
-    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID.includes('your_')
-  ) {
-    missing.push('NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID');
-  }
-  if (
-    !process.env.NEXT_PUBLIC_FIREBASE_APP_ID ||
-    process.env.NEXT_PUBLIC_FIREBASE_APP_ID.includes('your_')
-  ) {
-    missing.push('NEXT_PUBLIC_FIREBASE_APP_ID');
   }
   return missing;
 }
@@ -107,22 +127,14 @@ export function getSafeFirebaseEnvDiagnostic(): SafeFirebaseEnvDiagnostic {
 
   return {
     client: {
-      hasApiKey: Boolean(
-        process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
-          !process.env.NEXT_PUBLIC_FIREBASE_API_KEY.includes('placeholder') &&
-          !process.env.NEXT_PUBLIC_FIREBASE_API_KEY.includes('your_')
-      ),
-      hasAuthDomain: Boolean(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN),
-      hasProjectId: Boolean(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID),
-      hasStorageBucket: Boolean(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET),
+      hasApiKey: isFirebaseClientConfigured,
+      hasAuthDomain: Boolean(resolvedAuthDomain),
+      hasProjectId: Boolean(resolvedProjectId),
+      hasStorageBucket: Boolean(resolvedStorageBucket),
       hasMessagingSenderId: Boolean(
-        process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID &&
-          !process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID.includes('your_')
+        resolvedMessagingSenderId && !resolvedMessagingSenderId.includes('your_')
       ),
-      hasAppId: Boolean(
-        process.env.NEXT_PUBLIC_FIREBASE_APP_ID &&
-          !process.env.NEXT_PUBLIC_FIREBASE_APP_ID.includes('your_')
-      ),
+      hasAppId: Boolean(resolvedAppId && !resolvedAppId.includes('your_')),
       isConfigured: missingClient.length === 0,
       missingKeys: missingClient,
     },

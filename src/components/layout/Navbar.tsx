@@ -14,11 +14,21 @@ interface NavbarProps {
   onOpenCommunityCheckout?: () => void;
 }
 
+const emptySubscribe = () => () => {};
+function useMounted(): boolean {
+  return React.useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false
+  );
+}
+
 export function Navbar({ onOpenCommunityCheckout }: NavbarProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mounted = useMounted();
   const pathname = usePathname();
-  const { currentUser, userProfile, isAuthenticated, loading, logout } = useUserAuth();
+  const { currentUser, userProfile, isAuthenticated, logout } = useUserAuth();
   const pricing = useDynamicPricing();
   const { formatPrice } = useCurrency();
 
@@ -96,42 +106,42 @@ export function Navbar({ onOpenCommunityCheckout }: NavbarProps) {
 
             {/* Desktop Primary CTA & Customer Auth */}
             <div className="hidden lg:flex items-center gap-3">
-              {!loading && (
-                <>
-                  {isAuthenticated ? (
-                    <div className="flex items-center gap-2">
-                      <Link
-                        href="/account"
-                        className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#181918] hover:text-[#244634] px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4D9] transition-colors font-mono"
-                        title={userProfile?.name || currentUser?.email || 'My Account'}
-                      >
-                        <UserIcon className="w-3.5 h-3.5 text-[#244634]" />
-                        <span>Account</span>
-                      </Link>
-                      <button
-                        onClick={() => logout()}
-                        className="text-xs font-mono uppercase tracking-wider text-[#706E69] hover:text-[#992218] transition-colors px-2 py-1.5 cursor-pointer"
-                      >
-                        Log Out
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-3">
-                      <Link
-                        href="/login"
-                        className="text-xs font-mono uppercase tracking-wider font-semibold text-[#424440] hover:text-[#244634] transition-colors px-2 py-1.5"
-                      >
-                        Log In
-                      </Link>
-                      <Link
-                        href="/register"
-                        className="text-xs font-mono uppercase tracking-wider font-semibold text-[#244634] hover:underline px-2 py-1.5"
-                      >
-                        Register
-                      </Link>
-                    </div>
-                  )}
-                </>
+              {mounted && isAuthenticated ? (
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/account"
+                    id="nav-profile-link"
+                    className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[#181918] hover:text-[#244634] px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4D9] transition-colors font-mono"
+                    title={userProfile?.name || currentUser?.displayName || currentUser?.email || 'Profile'}
+                  >
+                    <UserIcon className="w-3.5 h-3.5 text-[#244634]" />
+                    <span>Profile</span>
+                  </Link>
+                  <button
+                    id="nav-logout-btn"
+                    onClick={() => logout()}
+                    className="text-xs font-mono uppercase tracking-wider text-[#706E69] hover:text-[#992218] transition-colors px-2 py-1.5 cursor-pointer"
+                  >
+                    Log Out
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <Link
+                    href="/login"
+                    id="nav-login-link"
+                    className="text-xs font-mono uppercase tracking-wider font-semibold text-[#424440] hover:text-[#244634] transition-colors px-2 py-1.5"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    id="nav-register-link"
+                    className="text-xs font-mono uppercase tracking-wider font-semibold text-[#244634] hover:underline px-2 py-1.5"
+                  >
+                    Register
+                  </Link>
+                </div>
               )}
 
               <CurrencySelector variant="navbar" />
@@ -184,49 +194,51 @@ export function Navbar({ onOpenCommunityCheckout }: NavbarProps) {
               ))}
             </nav>
 
-            {!loading && (
-              <div className="pt-3 pb-1 border-t border-[#E8E2D7] flex flex-col space-y-2">
-                {isAuthenticated ? (
-                  <>
-                    <Link
-                      href="/account"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-[#181918] hover:bg-[#EAE4D9]"
-                    >
-                      <UserIcon className="w-4 h-4 text-[#244634]" />
-                      <span>Account ({userProfile?.name || currentUser?.email})</span>
-                    </Link>
-                    <button
-                      onClick={() => {
-                        logout();
-                        setIsMobileMenuOpen(false);
-                      }}
-                      className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-[#992218] hover:bg-[#FFF2F0] text-left cursor-pointer"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Log Out</span>
-                    </button>
-                  </>
-                ) : (
-                  <div className="grid grid-cols-2 gap-2">
-                    <Link
-                      href="/login"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="px-3 py-2 text-center rounded-lg text-sm font-medium border border-[#D5CDC0] bg-white text-[#181918] hover:bg-[#FAF7F2]"
-                    >
-                      Log In
-                    </Link>
-                    <Link
-                      href="/register"
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="px-3 py-2 text-center rounded-lg text-sm font-medium bg-[#244634] text-white hover:bg-[#1B3527]"
-                    >
-                      Register
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
+            <div className="pt-3 pb-1 border-t border-[#E8E2D7] flex flex-col space-y-2">
+              {mounted && isAuthenticated ? (
+                <>
+                  <Link
+                    href="/account"
+                    id="mobile-nav-profile-link"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-[#181918] hover:bg-[#EAE4D9]"
+                  >
+                    <UserIcon className="w-4 h-4 text-[#244634]" />
+                    <span>Profile ({userProfile?.name || currentUser?.displayName || currentUser?.email || 'Account'})</span>
+                  </Link>
+                  <button
+                    id="mobile-nav-logout-btn"
+                    onClick={() => {
+                      logout();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium text-[#992218] hover:bg-[#FFF2F0] text-left cursor-pointer"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Log Out</span>
+                  </button>
+                </>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    href="/login"
+                    id="mobile-nav-login-link"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="px-3 py-2 text-center rounded-lg text-sm font-medium border border-[#D5CDC0] bg-white text-[#181918] hover:bg-[#FAF7F2]"
+                  >
+                    Login
+                  </Link>
+                  <Link
+                    href="/register"
+                    id="mobile-nav-register-link"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="px-3 py-2 text-center rounded-lg text-sm font-medium bg-[#244634] text-white hover:bg-[#1B3527]"
+                  >
+                    Register
+                  </Link>
+                </div>
+              )}
+            </div>
 
             <div className="pt-4 border-t border-[#E8E2D7] space-y-3">
               <div>

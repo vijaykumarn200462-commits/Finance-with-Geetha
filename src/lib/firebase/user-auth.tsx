@@ -126,9 +126,22 @@ export function UserAuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      await syncProfile(user);
-    });
+    let unsubscribe: () => void = () => {};
+    try {
+      unsubscribe = onAuthStateChanged(
+        auth,
+        async (user) => {
+          await syncProfile(user);
+        },
+        (error) => {
+          console.error('onAuthStateChanged error in user auth:', error);
+          setLoading(false);
+        }
+      );
+    } catch (err) {
+      console.error('Error attaching onAuthStateChanged listener:', err);
+      setTimeout(() => setLoading(false), 0);
+    }
 
     return () => unsubscribe();
   }, [syncProfile]);

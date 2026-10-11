@@ -149,14 +149,14 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
         // Store ID token in cookie for server verification
         const token = await getIdToken(currentUser);
-        document.cookie = `admin_session=${token}; path=/; credentials=include; max-age=3600; SameSite=Lax`;
+        document.cookie = `admin_session=${token}; path=/; max-age=3600; SameSite=Lax`;
       } else {
         // User is logged into Firebase, but is NOT an authorized active admin
         console.warn(`User ${currentUser.email} (${currentUser.uid}) is not an active admin.`);
         setUser(currentUser);
         setAdminRecord(null);
         setIsAdmin(false);
-        document.cookie = 'admin_session=; path=/; credentials=include; credentials=include; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        document.cookie = 'admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
       }
     } catch (err: unknown) {
       console.error('Error verifying admin authorization:', err);
@@ -168,10 +168,23 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onIdTokenChanged(auth, async (currentUser) => {
-      setLoading(true);
-      await verifyAndSetAdminState(currentUser);
-    });
+    let unsubscribe: () => void = () => {};
+    try {
+      unsubscribe = onIdTokenChanged(
+        auth,
+        async (currentUser) => {
+          setLoading(true);
+          await verifyAndSetAdminState(currentUser);
+        },
+        (error) => {
+          console.error('onIdTokenChanged error in AdminAuth:', error);
+          setLoading(false);
+        }
+      );
+    } catch (err) {
+      console.error('Error attaching onIdTokenChanged listener:', err);
+      setTimeout(() => setLoading(false), 0);
+    }
 
     return () => unsubscribe();
   }, [verifyAndSetAdminState]);
