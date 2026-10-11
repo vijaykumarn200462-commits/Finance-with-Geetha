@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { QueryDocumentSnapshot } from 'firebase-admin/firestore';
 import { adminDb } from '@/lib/firebase/admin';
-import { COLLECTIONS } from '@/lib/firebase/firestore';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 import { verifyAdminRequest } from '@/lib/firebase/admin-verify';
 import { CommunityMember } from '@/types/community';
 

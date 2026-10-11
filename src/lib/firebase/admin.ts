@@ -87,3 +87,5 @@ export const adminDb: Firestore =
 export const adminStorage: Storage =
   adminStorageInstance ||
   (new Proxy({}, unconfiguredHandler('Storage')) as unknown as Storage);
+
+export { COLLECTIONS } from './collections';

@@ -23,16 +23,8 @@ import { ContactMessage } from '@/types/message';
 import { CommunityMember } from '@/types/community';
 import { AdminRecord } from '@/types/admin';
 
-export const COLLECTIONS = {
-  ADMINS: 'admins',
-  USERS: 'users',
-  PRODUCTS: 'products',
-  ORDERS: 'orders',
-  COMMUNITY_MEMBERS: 'community_members',
-  MESSAGES: 'messages',
-  SITE_CONTENT: 'site_content',
-  SETTINGS: 'settings',
-} as const;
+import { COLLECTIONS } from './collections';
+export { COLLECTIONS };
 
 // Helper to convert Firestore doc to typed object
 export function docToData<T>(docSnap: DocumentData): T {
