@@ -10,7 +10,7 @@ import {
   getDoc,
   onSnapshot,
 } from 'firebase/firestore';
-import { COLLECTIONS } from './firestore';
+import { COLLECTIONS } from './collections';
 import {
   HeroContent,
   StatsContent,

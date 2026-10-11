@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { stripe } from '@/lib/stripe';
 import { adminDb } from '@/lib/firebase/admin';
-import { COLLECTIONS } from '@/lib/firebase/firestore';
+import { COLLECTIONS } from '@/lib/firebase/collections';
 
 export async function POST(request: Request) {
   try {

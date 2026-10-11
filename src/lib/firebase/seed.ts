@@ -1,5 +1,5 @@
 import { adminDb } from './admin';
-import { COLLECTIONS } from './firestore';
+import { COLLECTIONS } from './collections';
 
 export const DEFAULT_SEED_PRODUCTS = [
   {

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb, isFirebaseAdminConfigured } from '@/lib/firebase/admin';
-import { isFirebaseClientConfigured, firebaseConfig } from '@/lib/firebase/client';
+import { isFirebaseClientConfigured, firebaseConfig } from '@/lib/firebase/config';
 import { verifyAdminRequest } from '@/lib/firebase/admin-verify';
 
 export async function GET(request: Request) {
