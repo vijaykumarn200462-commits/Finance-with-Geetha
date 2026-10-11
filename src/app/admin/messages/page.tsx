@@ -3,8 +3,6 @@ import type { Metadata } from 'next';
 import AdminMessagesClient from '@/components/admin/AdminMessagesClient';
 import { RefreshCw } from 'lucide-react';
 
-export const instant = false;
-
 export const metadata: Metadata = {
   title: 'Inbound Inquiries | Admin Console',
 };

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { adminStorage, isFirebaseAdminConfigured } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/firebase/admin-verify';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const authCheck = await verifyAdminRequest(request);

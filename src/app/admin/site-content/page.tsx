@@ -3,8 +3,6 @@ import type { Metadata } from 'next';
 import AdminSiteContentClient from '@/components/admin/AdminSiteContentClient';
 import { RefreshCw } from 'lucide-react';
 
-export const instant = false;
-
 export const metadata: Metadata = {
   title: 'Site Content Management | Admin Console',
 };

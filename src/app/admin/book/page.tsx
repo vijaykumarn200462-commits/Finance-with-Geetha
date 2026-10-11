@@ -3,8 +3,6 @@ import type { Metadata } from 'next';
 import AdminBookClient from '@/components/admin/AdminBookClient';
 import { RefreshCw } from 'lucide-react';
 
-export const instant = false;
-
 export const metadata: Metadata = {
   title: 'Book Management | Admin Console',
 };

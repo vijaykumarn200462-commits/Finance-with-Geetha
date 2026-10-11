@@ -2,8 +2,6 @@ import React, { Suspense } from 'react';
 import type { Metadata } from 'next';
 import AdminDashboardClient from '@/components/admin/AdminDashboardClient';
 
-export const instant = false;
-
 export const metadata: Metadata = {
   title: 'Business Overview | Admin Console',
 };

@@ -5,6 +5,8 @@ import { COLLECTIONS } from '@/lib/firebase/collections';
 import { verifyAdminRequest } from '@/lib/firebase/admin-verify';
 import { CommunityMember } from '@/types/community';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const authCheck = await verifyAdminRequest(request);

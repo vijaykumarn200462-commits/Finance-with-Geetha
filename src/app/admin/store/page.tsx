@@ -3,8 +3,6 @@ import type { Metadata } from 'next';
 import AdminStoreClient from '@/components/admin/AdminStoreClient';
 import { RefreshCw } from 'lucide-react';
 
-export const instant = false;
-
 export const metadata: Metadata = {
   title: 'Store Front Management | Admin Console',
 };

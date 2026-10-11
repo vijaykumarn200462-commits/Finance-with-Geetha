@@ -4,6 +4,8 @@ import { adminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { verifyAdminRequest } from '@/lib/firebase/admin-verify';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const authCheck = await verifyAdminRequest(request);

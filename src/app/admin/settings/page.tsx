@@ -3,8 +3,6 @@ import type { Metadata } from 'next';
 import AdminSettingsClient from '@/components/admin/AdminSettingsClient';
 import { RefreshCw } from 'lucide-react';
 
-export const instant = false;
-
 export const metadata: Metadata = {
   title: 'Settings & Regional Configuration | Admin Console',
 };

@@ -3,8 +3,6 @@ import type { Metadata } from 'next';
 import AdminMediaClient from '@/components/admin/AdminMediaClient';
 import { RefreshCw } from 'lucide-react';
 
-export const instant = false;
-
 export const metadata: Metadata = {
   title: 'Media Assets & Storage | Admin Console',
 };

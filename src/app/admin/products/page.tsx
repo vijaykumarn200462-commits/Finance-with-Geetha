@@ -3,8 +3,6 @@ import type { Metadata } from 'next';
 import AdminProductsClient from '@/components/admin/AdminProductsClient';
 import { RefreshCw } from 'lucide-react';
 
-export const instant = false;
-
 export const metadata: Metadata = {
   title: 'Product Catalog & Dynamic Pricing | Admin Console',
 };

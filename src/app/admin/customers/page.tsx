@@ -3,8 +3,6 @@ import type { Metadata } from 'next';
 import AdminCustomersClient from '@/components/admin/AdminCustomersClient';
 import { RefreshCw } from 'lucide-react';
 
-export const instant = false;
-
 export const metadata: Metadata = {
   title: 'Customer Directory | Admin Console',
 };

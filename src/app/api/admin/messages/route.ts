@@ -5,6 +5,8 @@ import { COLLECTIONS } from '@/lib/firebase/collections';
 import { verifyAdminRequest } from '@/lib/firebase/admin-verify';
 import { ContactMessage } from '@/types/message';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: Request) {
   try {
     const authCheck = await verifyAdminRequest(request);

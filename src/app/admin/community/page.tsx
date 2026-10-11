@@ -3,8 +3,6 @@ import type { Metadata } from 'next';
 import AdminCommunityClient from '@/components/admin/AdminCommunityClient';
 import { RefreshCw } from 'lucide-react';
 
-export const instant = false;
-
 export const metadata: Metadata = {
   title: 'Community Members | Admin Console',
 };

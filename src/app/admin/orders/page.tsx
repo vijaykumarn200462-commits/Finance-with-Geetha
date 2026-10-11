@@ -3,8 +3,6 @@ import type { Metadata } from 'next';
 import AdminOrdersClient from '@/components/admin/AdminOrdersClient';
 import { RefreshCw } from 'lucide-react';
 
-export const instant = false;
-
 export const metadata: Metadata = {
   title: 'Orders Management | Admin Console',
 };

@@ -16,6 +16,8 @@ const DEFAULT_REGIONAL_SETTINGS: RegionalSettings = {
   rateCacheTtlMinutes: 60,
 };
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(request: NextRequest) {
   try {
     // 1. Fetch admin regional settings from Firestore if configured
@@ -91,6 +93,9 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (error: unknown) {
+    if ((error as { digest?: string })?.digest?.startsWith?.('NEXT_')) {
+      throw error;
+    }
     console.error('Geo detection route error:', error);
 
     // Return resilient fallback
