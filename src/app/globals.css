@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --font-serif: var(--font-serif), Georgia, serif;
+  --font-sans: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+
+  --color-cream: #FAF7F2;
+  --color-cream-card: #FFFFFF;
+  --color-cream-subtle: #F3EFE8;
+  --color-cream-border: #E8E2D7;
+  --color-charcoal: #181918;
+  --color-charcoal-muted: #5C5E5B;
+  --color-charcoal-soft: #858783;
+  --color-forest: #244634;
+  --color-forest-hover: #1B3527;
+  --color-forest-light: #EAF0EC;
+  --color-forest-border: #C5D8CC;
+  --color-warm-sand: #E3DCCE;
+  --color-gold-accent: #9A6B2F;
+}
+
+:root {
+  --background: #FAF7F2;
+  --foreground: #181918;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  selection-background-color: #244634;
+  selection-color: #FAF7F2;
+}
+
+::selection {
+  background-color: #244634;
+  color: #FAF7F2;
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Editorial typography utilities */
+.font-editorial {
+  font-family: var(--font-serif), Georgia, serif;
+}
+
+.font-body {
+  font-family: var(--font-sans), system-ui, sans-serif;
+}

@@ -1,0 +1,104 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        (
+          exists(/databases/$(database)/documents/admins/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.role == 'admin' &&
+          get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.active == true
+        )
+      );
+    }
+
+    // Admins Collection:
+    // - Authenticated users can read their own record to verify their admin status
+    // - Active admins can read or write all admin records
+    // - Unauthorized users and customers have NO write access and cannot inspect other admins
+    match /admins/{uid} {
+      allow read: if isAuthenticated() && (request.auth.uid == uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Users Collection:
+    // - Customers can read their own user record; Admins can read all
+    // - Customers can register creating their own record strictly with role: "customer"
+    // - Customers can update only their own profile without role escalation
+    // - Role escalation (e.g. customer -> admin) is strictly prevented
+    // - Admins can read, update, or delete any user
+    match /users/{uid} {
+      allow read: if isAuthenticated() && (request.auth.uid == uid || isAdmin());
+      allow create: if isAuthenticated() &&
+                    request.auth.uid == uid &&
+                    request.resource.data.uid == uid &&
+                    request.resource.data.role == 'customer';
+      allow update: if isAdmin() ||
+                    (isAuthenticated() &&
+                     request.auth.uid == uid &&
+                     request.resource.data.uid == resource.data.uid &&
+                     request.resource.data.role == resource.data.role &&
+                     request.resource.data.role == 'customer');
+      allow delete: if isAdmin();
+    }
+
+    // Products Collection: Public can read products; Admins manage all
+    // Customers have NO write access
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+
+    // Orders Collection: Users can read their own orders; Admins manage all
+    // Customers have NO write access
+    match /orders/{orderId} {
+      allow read: if isAuthenticated() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Community Members: Members can read their status; Admins manage all
+    // Customers have NO write access
+    match /community_members/{userId} {
+      allow read: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Messages (Contact Form):
+    // Only authenticated users can submit messages associated with their verified uid
+    // Only Admins can view, mark read, reply, or delete
+    match /messages/{messageId} {
+      allow create: if isAdmin() ||
+                    (isAuthenticated() &&
+                     request.resource.data.userId == request.auth.uid &&
+                     request.resource.data.status == 'unread');
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Site Content: Public read, Admin write
+    // Customers have NO write access
+    match /site_content/{documentId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Settings: Public read, Admin write
+    // Customers have NO write access
+    match /settings/{section} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Deny everything else by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

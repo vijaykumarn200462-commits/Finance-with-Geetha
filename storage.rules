@@ -1,0 +1,52 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.admin == true ||
+        (
+          firestore.exists(/databases/(default)/documents/admins/$(request.auth.uid)) &&
+          firestore.get(/databases/(default)/documents/admins/$(request.auth.uid)).data.role == 'admin' &&
+          firestore.get(/databases/(default)/documents/admins/$(request.auth.uid)).data.active == true
+        )
+      );
+    }
+
+    // Public marketing assets & images (products, media)
+    match /products/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /media/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /profile/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Protected digital downloads (books, templates)
+    // Only admins or authenticated buyers (via signed URLs or server admin proxy)
+    match /books/{allPaths=**} {
+      allow read, write: if isAdmin();
+    }
+
+    match /templates/{allPaths=**} {
+      allow read, write: if isAdmin();
+    }
+
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
