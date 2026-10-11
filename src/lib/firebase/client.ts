@@ -7,6 +7,8 @@ import {
   isFirebaseClientConfigured,
   getMissingClientEnvVars,
   validateFirebaseClientConfig,
+  getSafeFirebaseEnvDiagnostic,
+  SafeFirebaseEnvDiagnostic,
 } from './config';
 
 export {
@@ -14,6 +16,8 @@ export {
   isFirebaseClientConfigured,
   getMissingClientEnvVars,
   validateFirebaseClientConfig,
+  getSafeFirebaseEnvDiagnostic,
+  type SafeFirebaseEnvDiagnostic,
 };
 
 let clientAppInstance: FirebaseApp | null = null;
@@ -23,6 +27,9 @@ let clientStorageInstance: FirebaseStorage | null = null;
 
 export function getFirebaseApp(): FirebaseApp {
   if (clientAppInstance) return clientAppInstance;
+  if (typeof window === 'undefined') {
+    throw new Error('Firebase Client App cannot be accessed during server-side execution. Use Firebase Admin SDK for server-side operations.');
+  }
   if (getApps().length > 0) {
     clientAppInstance = getApp();
     return clientAppInstance;

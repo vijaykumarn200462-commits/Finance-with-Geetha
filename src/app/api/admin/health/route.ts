@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { adminDb, isFirebaseAdminConfigured } from '@/lib/firebase/admin';
-import { isFirebaseClientConfigured, firebaseConfig } from '@/lib/firebase/config';
+import { isFirebaseClientConfigured, firebaseConfig, getSafeFirebaseEnvDiagnostic } from '@/lib/firebase/config';
 import { verifyAdminRequest } from '@/lib/firebase/admin-verify';
 
 export async function GET(request: Request) {
@@ -17,6 +17,8 @@ export async function GET(request: Request) {
       firestoreStatus = `error: ${err instanceof Error ? err.message : 'Unknown'}`;
     }
 
+    const envDiagnostic = getSafeFirebaseEnvDiagnostic();
+
     return NextResponse.json({
       status: 'ok',
       timestamp: new Date().toISOString(),
@@ -28,6 +30,7 @@ export async function GET(request: Request) {
       authDomain: firebaseConfig.authDomain,
       authenticatedAsAdmin: isAuthorized,
       adminEmail: adminCheck.email,
+      envDiagnostic,
     });
   } catch (error: unknown) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
