@@ -41,13 +41,24 @@ export async function verifyAdminRequest(request?: Request): Promise<VerifyAdmin
       }
     }
 
-    // 3. Try reading from Cookie
+    // 3. Try reading from Cookie via Next.js cookies()
     if (!idToken) {
       try {
         const cookieStore = await cookies();
         idToken = cookieStore.get('admin_session')?.value;
       } catch {
         // cookies() fallback
+      }
+    }
+
+    // 4. Try reading cookie directly from Request headers
+    if (!idToken && request) {
+      const cookieHeader = request.headers.get('cookie');
+      if (cookieHeader) {
+        const match = cookieHeader.match(/(?:^|;\s*)admin_session=([^;]+)/);
+        if (match) {
+          idToken = decodeURIComponent(match[1].trim());
+        }
       }
     }
 
@@ -59,12 +70,11 @@ export async function verifyAdminRequest(request?: Request): Promise<VerifyAdmin
       };
     }
 
-    // If Firebase Admin credentials are not yet set in environment, check development fallback
+    // If Firebase Admin credentials are not yet set in environment, check development notice
     if (!isFirebaseAdminConfigured) {
       console.warn(
         'FIREBASE ADMIN NOTICE: Service account credentials are not configured in environment variables. Set FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY.'
       );
-      // In development, if a token is present, we still try decoding or warn
     }
 
     // Verify token with Firebase Admin

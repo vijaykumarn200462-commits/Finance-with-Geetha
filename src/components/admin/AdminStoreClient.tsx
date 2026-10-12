@@ -52,6 +52,15 @@ export default function AdminStoreClient() {
       setProducts((prev) =>
         prev.map((p) => (p.id === prod.id ? { ...p, active: nextActive } : p))
       );
+      try {
+        await fetch('/api/admin/site-content/revalidate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ section: 'store' }),
+        });
+      } catch {
+        // Non-blocking
+      }
       setSuccessMessage(`Product "${prod.name}" is now ${nextActive ? 'visible' : 'hidden'} on /store`);
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err: unknown) {

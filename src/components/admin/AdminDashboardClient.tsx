@@ -61,6 +61,12 @@ export default function AdminDashboardClient() {
         fetch('/api/admin/community').catch(() => null),
       ]);
 
+      const firstFailed = [ordersRes, messagesRes, customersRes, communityRes].find((r) => r && !r.ok);
+      if (firstFailed) {
+        const errJson = await firstFailed.json().catch(() => ({}));
+        setError(errJson.error || `Server error fetching dashboard data (HTTP ${firstFailed.status})`);
+      }
+
       const ordersData = ordersRes?.ok ? await ordersRes.json() : { orders: [] };
       const messagesData = messagesRes?.ok ? await messagesRes.json() : { messages: [] };
       const customersData = customersRes?.ok ? await customersRes.json() : { customers: [] };
@@ -113,12 +119,18 @@ export default function AdminDashboardClient() {
           fetch('/api/admin/community').catch(() => null),
         ]);
 
+        if (!active) return;
+
+        const firstFailed = [ordersRes, messagesRes, customersRes, communityRes].find((r) => r && !r.ok);
+        if (firstFailed) {
+          const errJson = await firstFailed.json().catch(() => ({}));
+          setError(errJson.error || `Server error fetching dashboard data (HTTP ${firstFailed.status})`);
+        }
+
         const ordersData = ordersRes?.ok ? await ordersRes.json() : { orders: [] };
         const messagesData = messagesRes?.ok ? await messagesRes.json() : { messages: [] };
         const customersData = customersRes?.ok ? await customersRes.json() : { customers: [] };
         const communityData = communityRes?.ok ? await communityRes.json() : { members: [] };
-
-        if (!active) return;
 
         const orders: Order[] = ordersData.orders || [];
         const messages: ContactMessage[] = messagesData.messages || [];

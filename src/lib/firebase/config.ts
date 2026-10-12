@@ -122,17 +122,31 @@ export function getSafeFirebaseEnvDiagnostic(): SafeFirebaseEnvDiagnostic {
   const missingClient = getMissingClientEnvVars();
   const missingServer: string[] = [];
 
-  const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  const projectId =
+    process.env.FIREBASE_PROJECT_ID ||
+    process.env.FIREBASE_ADMIN_PROJECT_ID ||
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   if (!projectId) {
     missingServer.push('FIREBASE_PROJECT_ID');
   }
 
-  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
+  const clientEmail =
+    process.env.FIREBASE_CLIENT_EMAIL ||
+    process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
   if (!clientEmail || clientEmail.includes('placeholder')) {
     missingServer.push('FIREBASE_CLIENT_EMAIL');
   }
 
-  const privateKey = process.env.FIREBASE_PRIVATE_KEY;
+  let privateKey =
+    process.env.FIREBASE_PRIVATE_KEY ||
+    process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+  if (privateKey) {
+    let key = privateKey.trim();
+    if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+      key = key.slice(1, -1).trim();
+    }
+    privateKey = key;
+  }
   if (!privateKey || !privateKey.includes('PRIVATE KEY') || privateKey.includes('YOUR_PRIVATE_KEY')) {
     missingServer.push('FIREBASE_PRIVATE_KEY');
   }
@@ -153,7 +167,11 @@ export function getSafeFirebaseEnvDiagnostic(): SafeFirebaseEnvDiagnostic {
     server: {
       hasProjectId: Boolean(projectId),
       hasClientEmail: Boolean(clientEmail && !clientEmail.includes('placeholder')),
-      hasPrivateKey: Boolean(privateKey && privateKey.includes('PRIVATE KEY') && !privateKey.includes('YOUR_PRIVATE_KEY')),
+      hasPrivateKey: Boolean(
+        privateKey &&
+          privateKey.includes('PRIVATE KEY') &&
+          !privateKey.includes('YOUR_PRIVATE_KEY')
+      ),
       isAdminConfigured: missingServer.length === 0,
       missingKeys: missingServer,
     },

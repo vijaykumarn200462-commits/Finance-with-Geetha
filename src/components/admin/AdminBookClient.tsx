@@ -139,6 +139,17 @@ export default function AdminBookClient() {
         console.warn('Could not update products/book (might not exist yet):', prodErr);
       }
 
+      // 3. Trigger immediate on-demand ISR revalidation for /book and /
+      try {
+        await fetch('/api/admin/site-content/revalidate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ section: 'book' }),
+        });
+      } catch {
+        // Non-blocking revalidation
+      }
+
       setSuccessMessage('Book details saved successfully to Firestore!');
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err: unknown) {

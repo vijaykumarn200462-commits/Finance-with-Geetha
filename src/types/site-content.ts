@@ -119,6 +119,7 @@ export interface AboutContent {
   businessDescription: string;
   signature: string;
   location: string;
+  updatedAt?: string;
 }
 
 export interface FinalCTAContent {
