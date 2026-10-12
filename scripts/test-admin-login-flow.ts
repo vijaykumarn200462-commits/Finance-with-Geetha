@@ -4,9 +4,11 @@ import path from 'path';
 loadEnvConfig(path.resolve(process.cwd()));
 
 async function runTest() {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const adminMod: any = await import('@/lib/firebase/admin');
   const adminAuth = adminMod.adminAuth || adminMod.default?.adminAuth;
   const adminDb = adminMod.adminDb || adminMod.default?.adminDb;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const cfgMod: any = await import('@/lib/firebase/config');
   const firebaseConfig = cfgMod.firebaseConfig || cfgMod.default?.firebaseConfig;
 

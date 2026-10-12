@@ -166,6 +166,7 @@ export interface BookContent {
 }
 
 export interface CommunityPageContent {
+  enabled?: boolean;
   hero: { enabled?: boolean; eyebrow: string; title: string; subtitle: string };
   pricing: { enabled?: boolean; title: string; subtitle: string };
   benefits: { enabled?: boolean; title: string; items: Array<{ id?: string; enabled?: boolean; title: string; description: string }> };
@@ -176,6 +177,7 @@ export interface CommunityPageContent {
 }
 
 export interface AboutPageContent {
+  enabled?: boolean;
   hero: { enabled?: boolean; eyebrow: string; title: string; subtitle: string };
   story: { enabled?: boolean; title: string; paragraphs: string[] };
   values: { enabled?: boolean; title: string; items: Array<{ id?: string; enabled?: boolean; title: string; description: string }> };

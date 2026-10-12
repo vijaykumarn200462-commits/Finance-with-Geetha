@@ -18,6 +18,10 @@ export function Hero({ onJoinCommunity, onGetBook, content }: HeroProps) {
   const pricing = useDynamicPricing();
   const { formatPrice } = useCurrency();
 
+  if (content && content.enabled === false) {
+    return null;
+  }
+
   const eyebrow = content?.eyebrow || 'Bookkeeping Coaching';
   const headline = content?.headline || 'Learn how to actually build a bookkeeping business.';
   const supportingCopy =

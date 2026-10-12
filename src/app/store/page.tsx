@@ -49,6 +49,28 @@ export default function StorePage() {
     setIsCheckoutOpen(true);
   };
 
+  if (storePage.enabled === false) {
+    return (
+      <>
+        <Navbar
+          onOpenCommunityCheckout={() => {
+            setSelectedProductId('community');
+            setIsCheckoutOpen(true);
+          }}
+        />
+        <main className="flex-1 pt-32 pb-20 sm:pt-40 sm:pb-28">
+          <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
+            <h1 className="font-editorial text-3xl sm:text-4xl text-[#181918]">Digital Toolkits & Operational References</h1>
+            <p className="mt-4 text-base text-[#5C5E5B] max-w-lg mx-auto leading-relaxed">
+              The store is currently undergoing updates. Please check back soon or visit our community.
+            </p>
+          </section>
+        </main>
+        <Footer />
+      </>
+    );
+  }
+
   return (
     <>
       <Navbar

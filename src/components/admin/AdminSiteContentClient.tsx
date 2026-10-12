@@ -355,6 +355,17 @@ export default function AdminSiteContentClient() {
 
       if (dataToSave) {
         await saveSiteContentDoc(activeTab, dataToSave as Record<string, unknown>);
+
+        // Trigger on-demand Next.js static/ISR revalidation
+        try {
+          await fetch('/api/admin/site-content/revalidate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ section: activeTab }),
+          });
+        } catch (revErr) {
+          console.warn('[CMS] Background revalidation notice:', revErr);
+        }
       }
 
       setSuccessMessage(`Saved "${sectionName}" to Firestore. Changes are live on the website.`);
@@ -390,9 +401,9 @@ export default function AdminSiteContentClient() {
       case 'finalCta':
         return finalCta.enabled !== false;
       case 'communityPage':
-        return communityPage.hero?.enabled !== false;
+        return communityPage.enabled !== false && communityPage.hero?.enabled !== false;
       case 'aboutPage':
-        return aboutPage.hero?.enabled !== false;
+        return aboutPage.enabled !== false && aboutPage.hero?.enabled !== false;
       case 'contactPage':
         return contactPage.enabled !== false;
       case 'storePage':
@@ -438,12 +449,14 @@ export default function AdminSiteContentClient() {
       case 'communityPage':
         setCommunityPage({
           ...communityPage,
+          enabled: newState,
           hero: { ...communityPage.hero, enabled: newState },
         });
         break;
       case 'aboutPage':
         setAboutPage({
           ...aboutPage,
+          enabled: newState,
           hero: { ...aboutPage.hero, enabled: newState },
         });
         break;

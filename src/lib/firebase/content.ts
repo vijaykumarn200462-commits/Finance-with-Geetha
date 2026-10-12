@@ -238,6 +238,7 @@ export const DEFAULT_BOOK_PAGE_CONTENT: BookContent = {
 };
 
 export const DEFAULT_COMMUNITY_PAGE_CONTENT: CommunityPageContent = {
+  enabled: true,
   hero: {
     enabled: true,
     eyebrow: 'Live Mentorship Community',
@@ -295,6 +296,7 @@ export const DEFAULT_COMMUNITY_PAGE_CONTENT: CommunityPageContent = {
 };
 
 export const DEFAULT_ABOUT_PAGE_CONTENT: AboutPageContent = {
+  enabled: true,
   hero: {
     enabled: true,
     eyebrow: 'Founder & Working Professional',
@@ -414,11 +416,32 @@ export function useSectionContent<T extends object>(
 }
 
 /**
- * Hook for reading all site_content sections in realtime.
+ * Server-safe helper to fetch all site_content sections from Firestore.
  */
-export function useAllSiteContent() {
-  const [sections, setSections] = useState<Record<string, Record<string, unknown>>>({});
-  const [loading, setLoading] = useState<boolean>(true);
+export async function fetchAllSiteContent(): Promise<Record<string, Record<string, unknown>>> {
+  try {
+    const colRef = collection(db, COLLECTIONS.SITE_CONTENT);
+    const snapshot = await getDocs(colRef);
+    const map: Record<string, Record<string, unknown>> = {};
+    snapshot.forEach((d) => {
+      map[d.id] = d.data();
+    });
+    return map;
+  } catch (err: unknown) {
+    console.warn('[CMS] Failed to fetch site_content on server:', err);
+    return {};
+  }
+}
+
+/**
+ * Hook for reading all site_content sections in realtime.
+ * Can be seeded with server-rendered initialSections to prevent SSR leaks and hydration flash.
+ */
+export function useAllSiteContent(initialSections?: Record<string, Record<string, unknown>>) {
+  const [sections, setSections] = useState<Record<string, Record<string, unknown>>>(
+    initialSections || {}
+  );
+  const [loading, setLoading] = useState<boolean>(!initialSections || Object.keys(initialSections).length === 0);
 
   useEffect(() => {
     try {
@@ -605,18 +628,35 @@ export function useDynamicPricing() {
  */
 export async function fetchPublicStoreProducts(): Promise<LocalProduct[]> {
   try {
-    const q = query(
-      collection(db, COLLECTIONS.PRODUCTS),
-      where('active', '==', true),
-      orderBy('sortOrder', 'asc')
-    );
-    const snap = await getDocs(q);
+    let snap;
+    try {
+      const q = query(
+        collection(db, COLLECTIONS.PRODUCTS),
+        where('active', '==', true),
+        orderBy('sortOrder', 'asc')
+      );
+      snap = await getDocs(q);
+    } catch (indexErr: unknown) {
+      console.warn('Composite index query notice, using in-memory sort fallback:', indexErr);
+      const fallbackQ = query(
+        collection(db, COLLECTIONS.PRODUCTS),
+        where('active', '==', true)
+      );
+      snap = await getDocs(fallbackQ);
+    }
 
     if (snap.empty) {
       return PRODUCTS;
     }
 
-    return snap.docs.map((docSnap) => {
+    const docs = [...snap.docs];
+    docs.sort((a, b) => {
+      const aOrder = Number(a.data().sortOrder ?? 999);
+      const bOrder = Number(b.data().sortOrder ?? 999);
+      return aOrder - bOrder;
+    });
+
+    return docs.map((docSnap) => {
       const data = docSnap.data();
       const rawId = (data.slug || docSnap.id) as string;
       const validId: ProductId = (['community', 'book', 'cheatsheets', 'workflow', 'call'].includes(rawId)
