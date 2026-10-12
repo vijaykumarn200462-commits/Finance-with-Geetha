@@ -4,36 +4,54 @@
  * Does not make any Firebase SDK calls during evaluation.
  */
 
-// Support both standard NEXT_PUBLIC_ prefixes and Vercel project environment aliases
+// Production client configuration defaults for geetha-coaching project
+const DEFAULT_FIREBASE_CLIENT_CONFIG = {
+  apiKey: 'AIzaSyBwA1I-z8CzylPB_BmGDYNkn7gQVgIzBJI',
+  authDomain: 'geetha-coaching.firebaseapp.com',
+  projectId: 'geetha-coaching',
+  storageBucket: 'geetha-coaching.firebasestorage.app',
+  messagingSenderId: '704521310592',
+  appId: '1:704521310592:web:cc28c9e0dc54c7d699b165',
+};
+
+// Support both standard NEXT_PUBLIC_ prefixes, non-prefixed aliases, and project defaults
 const resolvedApiKey =
-  process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
-  process.env.FIREBASE_API_KEY ||
-  '';
+  (process.env.NEXT_PUBLIC_FIREBASE_API_KEY &&
+   !process.env.NEXT_PUBLIC_FIREBASE_API_KEY.includes('placeholder') &&
+   !process.env.NEXT_PUBLIC_FIREBASE_API_KEY.includes('your_')
+    ? process.env.NEXT_PUBLIC_FIREBASE_API_KEY
+    : undefined) ||
+  (process.env.FIREBASE_API_KEY &&
+   !process.env.FIREBASE_API_KEY.includes('placeholder') &&
+   !process.env.FIREBASE_API_KEY.includes('your_')
+    ? process.env.FIREBASE_API_KEY
+    : undefined) ||
+  DEFAULT_FIREBASE_CLIENT_CONFIG.apiKey;
 
 const resolvedAuthDomain =
   process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ||
   process.env.FIREBASE_AUTH_DOMAIN ||
-  'geetha-coaching.firebaseapp.com';
+  DEFAULT_FIREBASE_CLIENT_CONFIG.authDomain;
 
 const resolvedProjectId =
   process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
   process.env.FIREBASE_PROJECT_ID ||
-  'geetha-coaching';
+  DEFAULT_FIREBASE_CLIENT_CONFIG.projectId;
 
 const resolvedStorageBucket =
   process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ||
   process.env.FIREBASE_STORAGE_BUCKET ||
-  'geetha-coaching.appspot.com';
+  DEFAULT_FIREBASE_CLIENT_CONFIG.storageBucket;
 
 const resolvedMessagingSenderId =
   process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ||
   process.env.FIREBASE_MESSAGING_SENDER_ID ||
-  '';
+  DEFAULT_FIREBASE_CLIENT_CONFIG.messagingSenderId;
 
 const resolvedAppId =
   process.env.NEXT_PUBLIC_FIREBASE_APP_ID ||
   process.env.FIREBASE_APP_ID ||
-  '';
+  DEFAULT_FIREBASE_CLIENT_CONFIG.appId;
 
 export const isFirebaseClientConfigured: boolean = Boolean(
   resolvedApiKey &&
@@ -41,14 +59,8 @@ export const isFirebaseClientConfigured: boolean = Boolean(
     !resolvedApiKey.includes('your_')
 );
 
-// Fallback placeholder with standard API key format to ensure getAuth() can initialize
-// safely during Next.js App Router build-time page-data collection when env vars are absent.
-const safeApiKeyForInit = isFirebaseClientConfigured
-  ? resolvedApiKey
-  : (resolvedApiKey || 'AIzaSyPlaceholderClientKeyForBuildOnly000');
-
 export const firebaseConfig = {
-  apiKey: safeApiKeyForInit,
+  apiKey: resolvedApiKey,
   authDomain: resolvedAuthDomain,
   projectId: resolvedProjectId,
   storageBucket: resolvedStorageBucket,

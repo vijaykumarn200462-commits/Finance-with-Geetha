@@ -9,6 +9,7 @@ export interface VerifyAdminResult {
   adminRecord?: AdminRecord;
   error?: string;
   status?: number;
+  idToken?: string;
 }
 
 /**
@@ -106,6 +107,7 @@ export async function verifyAdminRequest(request?: Request): Promise<VerifyAdmin
       uid,
       email,
       adminRecord,
+      idToken,
     };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Invalid session or token';

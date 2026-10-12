@@ -74,6 +74,12 @@ function parseAdminAuthError(err: unknown, fallback: string): string {
     return 'For security reasons, please log out and log in again before changing your password.';
   }
   if (
+    code.includes('auth/unauthorized-domain') ||
+    msg.includes('auth/unauthorized-domain')
+  ) {
+    return 'This domain is not authorized in Firebase Authentication. Please add this domain to Authorized Domains in Firebase Console.';
+  }
+  if (
     code.includes('auth/api-key-not-valid') ||
     code.includes('auth/app-not-authorized') ||
     code.includes('auth/configuration-not-found') ||
@@ -98,6 +104,18 @@ function parseAdminAuthError(err: unknown, fallback: string): string {
   return cleaned;
 }
 
+function setAdminSessionCookie(token: string) {
+  if (typeof document === 'undefined') return;
+  const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  document.cookie = `admin_session=${token}; path=/; max-age=3600; SameSite=Lax${isSecure ? '; Secure' : ''}`;
+}
+
+function clearAdminSessionCookie() {
+  if (typeof document === 'undefined') return;
+  const isSecure = typeof window !== 'undefined' && window.location.protocol === 'https:';
+  document.cookie = `admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${isSecure ? '; Secure' : ''}`;
+}
+
 const AdminAuthContext = createContext<AdminAuthContextType | undefined>(undefined);
 
 export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
@@ -115,8 +133,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       setAdminRecord(null);
       setIsAdmin(false);
       setLoading(false);
-      // Clear cookie
-      document.cookie = 'admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      clearAdminSessionCookie();
       return;
     }
 
@@ -149,14 +166,14 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
         // Store ID token in cookie for server verification
         const token = await getIdToken(currentUser);
-        document.cookie = `admin_session=${token}; path=/; max-age=3600; SameSite=Lax`;
+        setAdminSessionCookie(token);
       } else {
         // User is logged into Firebase, but is NOT an authorized active admin
         console.warn(`User ${currentUser.email} (${currentUser.uid}) is not an active admin.`);
         setUser(currentUser);
         setAdminRecord(null);
         setIsAdmin(false);
-        document.cookie = 'admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+        clearAdminSessionCookie();
       }
     } catch (err: unknown) {
       console.error('Error verifying admin authorization:', err);
@@ -195,7 +212,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const credential = await signInWithEmailAndPassword(auth, email.trim(), pass);
       const token = await getIdToken(credential.user, true);
-      document.cookie = `admin_session=${token}; path=/; max-age=3600; SameSite=Lax`;
+      setAdminSessionCookie(token);
 
       // 1. Fetch admin record directly from Firestore
       let record = await getAdminRecord(credential.user.uid);
@@ -204,7 +221,11 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       if (!record) {
         try {
           const res = await fetch('/api/admin/verify-session', {
-            headers: { Authorization: `Bearer ${token}` },
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token}`,
+            },
           });
           if (res.ok) {
             const data = await res.json();
@@ -272,7 +293,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
       setUser(null);
       setAdminRecord(null);
       setIsAdmin(false);
-      document.cookie = 'admin_session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+      clearAdminSessionCookie();
     } catch (err) {
       console.error('Logout error:', err);
     }
@@ -311,7 +332,7 @@ export function AdminAuthProvider({ children }: { children: React.ReactNode }) {
 
       // Refresh admin session token
       const token = await getIdToken(currentUser, true);
-      document.cookie = `admin_session=${token}; path=/; max-age=3600; SameSite=Lax`;
+      setAdminSessionCookie(token);
 
       return { success: true };
     } catch (err: unknown) {

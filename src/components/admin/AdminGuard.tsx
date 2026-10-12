@@ -14,7 +14,10 @@ export function AdminGuard({ children }: { children: React.ReactNode }) {
   const { user, isAdmin, loading, logout } = useAdminAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const isLoginPage = pathname === '/admin/login';
+  const isLoginPage =
+    pathname === '/admin/login' ||
+    pathname === '/admin/login/' ||
+    (typeof pathname === 'string' && pathname.startsWith('/admin/login'));
 
   useEffect(() => {
     if (!loading && !user && !isLoginPage) {
