@@ -71,23 +71,25 @@ export function CurrencySelector({ variant = 'navbar', className = '' }: Currenc
         aria-label={`Currency selector: Currently ${selectedCurrency} (${currencySymbol})`}
         className={
           isNavbar
-            ? 'flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-mono font-medium rounded-lg text-[#323431] hover:text-[#181918] bg-[#F0EBE1] hover:bg-[#EAE4D9] border border-[#E2DBD0] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#244634]'
+            ? 'flex items-center gap-1 px-2 py-1 text-xs font-mono font-medium rounded-lg text-slate-700 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#138354] whitespace-nowrap'
             : isFooter
             ? 'flex items-center gap-2 px-3 py-2 text-xs font-mono text-[#D5D5CF] bg-[#222421] hover:bg-[#2B2E2A] border border-[#3A3D38] rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#84A98C]'
             : 'w-full flex items-center justify-between px-3 py-2.5 text-sm font-mono text-[#181918] bg-[#FAF8F5] border border-[#E2DBD0] rounded-xl hover:bg-[#F2ECE2] transition-colors'
         }
       >
-        <span className="flex items-center gap-1.5">
-          <span className="text-sm leading-none" aria-hidden="true">
+        <span className="flex items-center gap-1">
+          <span className="text-xs leading-none" aria-hidden="true">
             {currentConfig?.flag || '🌐'}
           </span>
           <span className="font-semibold">{selectedCurrency}</span>
-          <span className={isFooter ? 'text-[#84A98C]' : 'text-[#706E69]'}>({currencySymbol})</span>
+          {!isNavbar && (
+            <span className={isFooter ? 'text-[#84A98C]' : 'text-[#706E69]'}>({currencySymbol})</span>
+          )}
         </span>
         <ChevronDown
-          className={`w-3.5 h-3.5 transition-transform duration-200 ${
+          className={`w-3 h-3 transition-transform duration-200 ${
             isOpen ? 'rotate-180' : ''
-          } ${isFooter ? 'text-[#A8A8A2]' : 'text-[#706E69]'}`}
+          } ${isFooter ? 'text-[#A8A8A2]' : 'text-slate-500'}`}
         />
       </button>
 

@@ -55,12 +55,12 @@ async function main() {
   console.log('\n--- TEST 2: Server-Side fetchAllSiteContent() ---');
   try {
     const siteContent = await fetchAllSiteContent();
-    const docKeys = Object.keys(siteContent);
-    console.log(`[PASS] fetchAllSiteContent() retrieved ${docKeys.length} documents from Firestore.`);
-    console.log(`  - site_content/about enabled: ${siteContent.about?.enabled}`);
-    console.log(`  - site_content/hero enabled: ${siteContent.hero?.enabled}`);
-    console.log(`  - site_content/book enabled: ${siteContent.book?.enabled}`);
-    console.log(`  - site_content/store enabled: ${siteContent.store?.enabled}`);
+    const docKeys = Object.keys(siteContent.sections);
+    console.log(`[PASS] fetchAllSiteContent() retrieved ${docKeys.length} documents from Firestore (loaded: ${siteContent.loaded}).`);
+    console.log(`  - site_content/about enabled: ${(siteContent.sections.about as { enabled?: boolean })?.enabled}`);
+    console.log(`  - site_content/hero enabled: ${(siteContent.sections.hero as { enabled?: boolean })?.enabled}`);
+    console.log(`  - site_content/book enabled: ${(siteContent.sections.book as { enabled?: boolean })?.enabled}`);
+    console.log(`  - site_content/store enabled: ${(siteContent.sections.store as { enabled?: boolean })?.enabled}`);
   } catch (err: unknown) {
     console.error('[FAIL] fetchAllSiteContent() failed:', err);
     process.exit(1);

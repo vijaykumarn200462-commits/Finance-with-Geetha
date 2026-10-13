@@ -2,44 +2,72 @@ import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 
+// In-memory rate limiter for public inquiry protection (max 5 requests per 10 minutes per IP)
+const ipRateLimitMap = new Map<string, { count: number; firstRequestTime: number }>();
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now();
+  const windowMs = 10 * 60 * 1000;
+  const maxRequests = 5;
+
+  const record = ipRateLimitMap.get(ip);
+  if (!record || now - record.firstRequestTime > windowMs) {
+    ipRateLimitMap.set(ip, { count: 1, firstRequestTime: now });
+    return true;
+  }
+
+  if (record.count >= maxRequests) {
+    return false;
+  }
+
+  record.count += 1;
+  return true;
+}
+
 export async function POST(request: Request) {
   try {
-    // 1. Verify Authentication Token using Firebase Admin SDK
+    // 1. Check optional Firebase ID token
     let idToken: string | undefined;
     const authHeader = request.headers.get('authorization');
     if (authHeader && authHeader.startsWith('Bearer ')) {
       idToken = authHeader.split('Bearer ')[1].trim();
     }
 
-    if (!idToken) {
-      return NextResponse.json(
-        { error: 'Authentication required. Please log in before submitting a message.' },
-        { status: 401 }
-      );
-    }
+    let verifiedUserId = 'public_inquiry';
+    let verifiedEmail: string | undefined;
 
-    let decodedToken;
-    try {
-      decodedToken = await adminAuth.verifyIdToken(idToken);
-    } catch (tokenErr: unknown) {
-      const msg = tokenErr instanceof Error ? tokenErr.message : 'Invalid or expired token';
-      console.warn('[Contact API] Token verification failed:', msg);
-      return NextResponse.json(
-        { error: 'Authentication session expired or invalid. Please sign in again.' },
-        { status: 401 }
-      );
-    }
+    if (idToken) {
+      try {
+        const decodedToken = await adminAuth.verifyIdToken(idToken);
+        verifiedUserId = decodedToken.uid;
+        verifiedEmail = decodedToken.email;
+      } catch (tokenErr: unknown) {
+        const msg = tokenErr instanceof Error ? tokenErr.message : 'Invalid token';
+        console.warn('[Contact API] Bearer token invalid or expired:', msg);
+        return NextResponse.json(
+          { error: 'Your session has expired. Please log in again or submit as a guest.' },
+          { status: 401 }
+        );
+      }
+    } else {
+      // Unauthenticated visitor: apply IP rate limiting
+      const forwardedFor = request.headers.get('x-forwarded-for') || '127.0.0.1';
+      const clientIp = forwardedFor.split(',')[0].trim();
 
-    // Verified Firebase UID from Admin SDK token verification
-    const verifiedUserId = decodedToken.uid;
-    const verifiedEmail = decodedToken.email;
+      if (!checkRateLimit(clientIp)) {
+        return NextResponse.json(
+          { error: 'Too many inquiries sent. Please wait a few minutes before submitting again.' },
+          { status: 429 }
+        );
+      }
+    }
 
     // 2. Validate request body
-    const body = await request.json();
-    const { name, email, message, topic } = body;
+    const body = await request.json().catch(() => ({}));
+    const { name, email, phone, message, topic } = body;
 
-    if (!name || typeof name !== 'string' || name.trim().length === 0) {
-      return NextResponse.json({ error: 'Please provide your name.' }, { status: 400 });
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+      return NextResponse.json({ error: 'Please provide your full name (at least 2 characters).' }, { status: 400 });
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -50,32 +78,35 @@ export async function POST(request: Request) {
 
     if (!message || typeof message !== 'string' || message.trim().length < 10) {
       return NextResponse.json(
-        { error: 'Please enter a message with at least 10 characters.' },
+        { error: 'Please provide a message with at least 10 characters.' },
         { status: 400 }
       );
     }
 
-    // 3. Save directly to Firestore messages collection with verified userId
+    const contactPhone = typeof phone === 'string' && phone.trim() ? phone.trim() : null;
+
+    // 3. Save directly to Firestore messages collection
     const docRef = await adminDb.collection(COLLECTIONS.MESSAGES).add({
       userId: verifiedUserId,
       name: name.trim(),
       email: contactEmail.trim(),
-      topic: topic || 'General Inquiry',
+      phone: contactPhone,
+      topic: (topic && typeof topic === 'string') ? topic.trim() : 'Bookkeeping Services',
       message: message.trim(),
       status: 'unread',
+      isPublic: verifiedUserId === 'public_inquiry',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     });
 
     const messageId = docRef.id;
 
-    // Server-side logging for development & audit
     console.log('[Contact Message Stored]', {
       id: messageId,
       userId: verifiedUserId,
       name: name.trim(),
       email: contactEmail.trim(),
-      topic: topic || 'General Inquiry',
+      phone: contactPhone,
       timestamp: new Date().toISOString(),
     });
 

@@ -6,6 +6,6 @@ import HomePageClient from '@/components/home/HomePageClient';
 export const revalidate = 60;
 
 export default async function HomePage() {
-  const initialSections = await fetchAllSiteContent();
-  return <HomePageClient initialSections={initialSections} />;
+  const initialContent = await fetchAllSiteContent();
+  return <HomePageClient initialContent={initialContent} />;
 }

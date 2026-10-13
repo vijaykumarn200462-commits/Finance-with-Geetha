@@ -202,6 +202,21 @@ export interface StorePageContent {
   communityPromoEnabled: boolean;
 }
 
+export interface WhyUsReason {
+  title: string;
+  description: string;
+}
+
+export interface WhyUsContent {
+  enabled?: boolean;
+  eyebrow: string;
+  title: string;
+  description: string;
+  reasons: WhyUsReason[];
+  ctaTitle?: string;
+  ctaPhone?: string;
+}
+
 export interface SiteContentMap {
   hero: HeroContent;
   stats: StatsContent;
@@ -218,4 +233,7 @@ export interface SiteContentMap {
   aboutPage: AboutPageContent;
   contactPage: ContactPageContent;
   storePage: StorePageContent;
+  whyUs?: WhyUsContent;
+  services?: TeachingContent;
 }
+

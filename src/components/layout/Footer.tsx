@@ -39,21 +39,29 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-12 lg:gap-8 pb-12 border-b border-[#2C2E2B]">
           {/* Brand Column */}
           <div className="lg:col-span-2 space-y-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-md bg-[#244634] text-[#FAF7F2] flex items-center justify-center font-editorial text-lg font-bold border border-[#3C5E4A]">
-                G
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full overflow-hidden border border-emerald-500/50 shadow-inner flex-shrink-0">
+                <img
+                  src="https://lh3.googleusercontent.com/gg/AJWXcNc5cFZUdc92Hgns-UUZuRCxQf45gOAiCPRspBVSwOxCVcfEYcsdaPP7rAveA9hbc3jpIfNmlut7sA62tE4LRqKaRzVheSAEiH8dWJOP_EW3N53PIJlvf5SKh6bWKlM607xVHSN9jjV6zjlQrp2tK06iHMWw9HeRSqoYikRWMrWH5zEVpZKtrpaSies_kLBWxmfTic87YfLyTYPi3HoqfknTjTwYRLKROmWzhWy_4ZZazdjKWt4jxTPm_q58n0vPkrEXTE6IJYTJKEkmFcqoApcdvQk0UBSaxk8=s0"
+                  alt="Geetha N."
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <span className="font-editorial text-xl font-normal tracking-tight text-[#FAF7F2]">
-                Finance with Geetha
-              </span>
+              <div>
+                <span className="font-serif text-xl font-bold tracking-tight text-white block">
+                  Finance with Geetha
+                </span>
+                <span className="text-xs text-emerald-400 font-semibold tracking-wide uppercase">
+                  Bookkeeping & Accounting
+                </span>
+              </div>
             </div>
-            <p className="text-sm text-[#A8A8A2] max-w-sm leading-relaxed">
-              Learn how to actually build a bookkeeping business. Practical coaching on pricing,
-              discovery calls, onboarding, QuickBooks workflows, and calm operations.
+            <p className="text-sm text-slate-400 max-w-sm leading-relaxed">
+              Professional, meticulous bookkeeping and financial reporting services for businesses. Meticulous records, transparent pricing, and peace of mind.
             </p>
-            <div className="pt-2 text-xs text-[#7A7A74] space-y-1">
-              <p>Founded by Geetha — Finance with Geetha</p>
-              <p>Calm & Profitable Practice · 60 clients · 30–35 hrs/week</p>
+            <div className="pt-2 text-xs text-slate-400 space-y-1">
+              <p>Independent Bookkeeper & Accountant — Geetha N.</p>
+              <p>Bengaluru, Karnataka, India · Mon - Sat: 9:00 AM - 6:00 PM</p>
             </div>
           </div>
 
@@ -184,13 +192,17 @@ export function Footer() {
         </div>
 
         {/* Bottom copyright */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-[#7A7A74] gap-4">
-          <p>© 2026 Finance with Geetha. All rights reserved.</p>
-          <p className="font-mono text-[11px] flex items-center gap-2">
-            <span>Faith first · Family second · Business third</span>
+        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-400 gap-4">
+          <p>© 2026 Finance with Geetha. All rights reserved. Professional Bookkeeping & Accounting by Geetha N.</p>
+          <div className="flex items-center gap-4 text-xs">
+            <a href="tel:9538913912" className="text-emerald-400 hover:text-white transition-colors">
+              📞 9538913912
+            </a>
             <span>·</span>
-            <span className="text-[#84A98C]">Global delivery</span>
-          </p>
+            <a href="mailto:Cageethanofficail@gmail.com" className="text-slate-400 hover:text-white transition-colors">
+              Cageethanofficail@gmail.com
+            </a>
+          </div>
         </div>
       </div>
 

@@ -11,9 +11,10 @@ import {
   ExternalLink,
   RefreshCw,
 } from 'lucide-react';
-import { getSiteContentDoc, saveSiteContentDoc, getProductById, updateProduct } from '@/lib/firebase/firestore';
+import { getSiteContentDoc, getProductById, updateProduct } from '@/lib/firebase/firestore';
 import { uploadFileWithProgress } from '@/lib/firebase/storage';
 import { BookContent } from '@/types/site-content';
+import { auth } from '@/lib/firebase/client';
 import Link from 'next/link';
 
 const DEFAULT_BOOK_CONTENT: BookContent = {
@@ -121,10 +122,35 @@ export default function AdminBookClient() {
     setSuccessMessage(null);
 
     try {
-      // 1. Save to site_content/book
-      await saveSiteContentDoc('book', formData);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        throw new Error('Authentication required. Please sign in as an administrator.');
+      }
 
-      // 2. Sync to products/book
+      // 1. Synchronize the active state to site_content/book.enabled
+      const bookDataToSave = {
+        ...formData,
+        enabled: isActive,
+      };
+
+      // 2. Persist to site_content via authenticated server API (which triggers revalidation)
+      const res = await fetch('/api/admin/site-content', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ section: 'book', data: bookDataToSave }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Save failed with status ${res.status}`);
+      }
+
+      setFormData(bookDataToSave);
+
+      // 3. Sync to products/book
       try {
         await updateProduct('book', {
           name: formData.title,
@@ -139,18 +165,7 @@ export default function AdminBookClient() {
         console.warn('Could not update products/book (might not exist yet):', prodErr);
       }
 
-      // 3. Trigger immediate on-demand ISR revalidation for /book and /
-      try {
-        await fetch('/api/admin/site-content/revalidate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ section: 'book' }),
-        });
-      } catch {
-        // Non-blocking revalidation
-      }
-
-      setSuccessMessage('Book details saved successfully to Firestore!');
+      setSuccessMessage('Book details saved successfully to Firestore and live site updated!');
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save book changes';

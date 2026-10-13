@@ -32,6 +32,8 @@ export default function AdminMediaClient() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [bucketNotice, setBucketNotice] = useState<string | null>(null);
+
   useEffect(() => {
     loadFiles();
   }, []);
@@ -39,15 +41,32 @@ export default function AdminMediaClient() {
   async function loadFiles() {
     setLoading(true);
     setErrorMessage(null);
+    setBucketNotice(null);
     try {
       // First try client SDK listing
       const items = await listMediaFiles('media');
       setFiles(items);
+
+      // Verify server storage status and bucket notice
+      try {
+        const res = await fetch('/api/admin/media');
+        const data = await res.json();
+        if (data.notice) {
+          setBucketNotice(data.notice);
+        } else if (data.files && data.files.length > 0 && items.length === 0) {
+          setFiles(data.files);
+        }
+      } catch {
+        // Non-blocking API check
+      }
     } catch (err: unknown) {
       console.warn('Storage list error, trying API fallback:', err);
       try {
         const res = await fetch('/api/admin/media');
         const data = await res.json();
+        if (data.notice) {
+          setBucketNotice(data.notice);
+        }
         if (data.files) {
           setFiles(data.files);
         }
@@ -178,6 +197,19 @@ export default function AdminMediaClient() {
       </div>
 
       {/* Notifications */}
+      {bucketNotice && (
+        <div className="p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs leading-relaxed space-y-1 animate-fadeIn">
+          <div className="flex items-center gap-2 font-semibold">
+            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>Firebase Storage Bucket Notice</span>
+          </div>
+          <p>{bucketNotice}</p>
+          <p className="text-amber-800 font-mono text-[11px] pt-1">
+            To enable uploads: In the Firebase Console for &quot;geetha-coaching&quot;, navigate to Build &gt; Storage and click &quot;Get Started&quot; to provision the bucket.
+          </p>
+        </div>
+      )}
+
       {successMessage && (
         <div className="flex items-center gap-2 p-4 rounded-xl bg-[#EAF0EC] border border-[#244634]/30 text-[#244634] text-sm animate-fadeIn">
           <Check className="w-4 h-4 shrink-0" />

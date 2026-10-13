@@ -1,4 +1,8 @@
-import { useState, useEffect } from 'react';
+'use client';
+
+export * from './content-defaults';
+
+import { useState, useEffect, useMemo } from 'react';
 import { db } from './client';
 import {
   collection,
@@ -346,6 +350,30 @@ export const DEFAULT_STORE_PAGE_CONTENT: StorePageContent = {
   communityPromoEnabled: true,
 };
 
+export const DEFAULT_WHY_US_CONTENT = {
+  enabled: true,
+  eyebrow: 'Why Partner With Us',
+  title: 'Excellence in Bookkeeping, Dedicated to Your Success',
+  description:
+    'With Finance with Geetha, you get more than just numbers on a spreadsheet. You gain a dedicated professional committed to keeping your financial foundation solid so you can focus on scaling your enterprise.',
+  reasons: [
+    {
+      title: 'Transparent Pricing',
+      description: 'Affordable packages designed to fit your business size without hidden fees.',
+    },
+    {
+      title: '100% Data Confidentiality',
+      description: 'Strict security measures and professional ethics protecting your sensitive financial records.',
+    },
+    {
+      title: 'Responsive & Approachable',
+      description: 'Direct communication with Geetha N. whenever you have questions about your accounts.',
+    },
+  ],
+  ctaTitle: 'Ready for Stress-Free Accounting?',
+  ctaPhone: '9538913912',
+};
+
 export const DEFAULT_SITE_CONTENT = {
   hero: DEFAULT_HERO_CONTENT,
   stats: DEFAULT_STATS_CONTENT,
@@ -361,6 +389,7 @@ export const DEFAULT_SITE_CONTENT = {
   aboutPage: DEFAULT_ABOUT_PAGE_CONTENT,
   contactPage: DEFAULT_CONTACT_PAGE_CONTENT,
   storePage: DEFAULT_STORE_PAGE_CONTENT,
+  whyUs: DEFAULT_WHY_US_CONTENT,
 };
 
 // ==========================================
@@ -374,13 +403,15 @@ export const DEFAULT_SITE_CONTENT = {
  */
 export function useSectionContent<T extends object>(
   sectionKey: string,
-  defaultContent: T
+  defaultContent: T,
+  initialData?: T
 ) {
-  const [content, setContent] = useState<T>(defaultContent);
+  const baseContent = initialData || defaultContent;
+  const [content, setContent] = useState<T>(baseContent);
   const [isEnabled, setIsEnabled] = useState<boolean>(
-    (defaultContent as { enabled?: boolean }).enabled !== false
+    (baseContent as { enabled?: boolean }).enabled !== false
   );
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(!initialData);
 
   useEffect(() => {
     try {
@@ -433,15 +464,38 @@ export async function fetchAllSiteContent(): Promise<Record<string, Record<strin
   }
 }
 
+export type InitialSiteContentInput =
+  | Record<string, Record<string, unknown>>
+  | {
+      sections: Record<string, Record<string, unknown>>;
+      loaded?: boolean;
+      error?: string | null;
+    };
+
 /**
  * Hook for reading all site_content sections in realtime.
- * Can be seeded with server-rendered initialSections to prevent SSR leaks and hydration flash.
+ * Can be seeded with server-rendered initialContent/initialSections to prevent SSR leaks and hydration flash.
+ * Distinguishes explicit enabled: false, missing documents, and network/server failures.
  */
-export function useAllSiteContent(initialSections?: Record<string, Record<string, unknown>>) {
-  const [sections, setSections] = useState<Record<string, Record<string, unknown>>>(
-    initialSections || {}
-  );
-  const [loading, setLoading] = useState<boolean>(!initialSections || Object.keys(initialSections).length === 0);
+export function useAllSiteContent(initialInput?: InitialSiteContentInput) {
+  const initialMap: Record<string, Record<string, unknown>> = useMemo(() => {
+    if (!initialInput) return {};
+    if ('sections' in initialInput && typeof initialInput.sections === 'object' && initialInput.sections !== null) {
+      return initialInput.sections as Record<string, Record<string, unknown>>;
+    }
+    return initialInput as Record<string, Record<string, unknown>>;
+  }, [initialInput]);
+
+  const initialLoaded = useMemo(() => {
+    if (!initialInput) return false;
+    if ('loaded' in initialInput && typeof initialInput.loaded === 'boolean') {
+      return initialInput.loaded;
+    }
+    return Object.keys(initialMap).length > 0;
+  }, [initialInput, initialMap]);
+
+  const [sections, setSections] = useState<Record<string, Record<string, unknown>>>(initialMap);
+  const [loading, setLoading] = useState<boolean>(!initialLoaded);
 
   useEffect(() => {
     try {
@@ -457,7 +511,7 @@ export function useAllSiteContent(initialSections?: Record<string, Record<string
           setLoading(false);
         },
         (err) => {
-          console.warn('[CMS] All sections listener error:', err);
+          console.warn('[CMS] All sections realtime listener error:', err);
           setLoading(false);
         }
       );
@@ -467,10 +521,21 @@ export function useAllSiteContent(initialSections?: Record<string, Record<string
     }
   }, []);
 
-  const isSectionEnabled = (sectionKey: string, fallbackEnabled = true): boolean => {
+  /**
+   * Evaluates if a section is enabled:
+   * 1. If explicit Firestore document exists: returns doc.enabled !== false.
+   * 2. If data is still loading or server fetch failed: does not assume enabled.
+   * 3. If document does not exist in Firestore: returns false unless fallback is explicitly permitted.
+   */
+  const isSectionEnabled = (sectionKey: string, fallbackEnabled = false): boolean => {
     const sec = sections[sectionKey];
-    if (!sec) return fallbackEnabled;
-    return sec.enabled !== false;
+    if (sec) {
+      return sec.enabled !== false;
+    }
+    if (loading) {
+      return false;
+    }
+    return fallbackEnabled;
   };
 
   const getSection = <T extends object>(sectionKey: string, fallback: T): T => {
@@ -646,7 +711,7 @@ export async function fetchPublicStoreProducts(): Promise<LocalProduct[]> {
     }
 
     if (snap.empty) {
-      return PRODUCTS;
+      return [];
     }
 
     const docs = [...snap.docs];

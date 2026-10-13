@@ -38,7 +38,18 @@ export function uploadFileWithProgress(
         },
         (error) => {
           console.error('Storage upload error:', error);
-          reject(error);
+          const isBucketNotFound =
+            (error as { code?: string })?.code === 'storage/bucket-not-found' ||
+            (error as { message?: string })?.message?.includes('bucket does not exist');
+          if (isBucketNotFound) {
+            reject(
+              new Error(
+                'Firebase Storage bucket has not yet been provisioned in the Firebase Console. Please activate Cloud Storage in the Firebase Console (Build > Storage) for project geetha-coaching.'
+              )
+            );
+          } else {
+            reject(error);
+          }
         },
         async () => {
           try {

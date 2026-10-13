@@ -1,42 +1,83 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
+import { verifyAdminRequest } from '@/lib/firebase/admin-verify';
 
 export const dynamic = 'force-dynamic';
 
+export const ALLOWED_REVALIDATE_SECTIONS = [
+  'all',
+  'hero',
+  'stats',
+  'teaching',
+  'community',
+  'callStructure',
+  'book',
+  'store',
+  'oneOnOne',
+  'about',
+  'finalCta',
+  'communityPage',
+  'aboutPage',
+  'contactPage',
+  'storePage',
+  'services',
+  'whyUs',
+  'settings',
+  'products',
+] as const;
+
 export async function POST(request: Request) {
   try {
-    const body = await request.json().catch(() => ({}));
-    const section = (body && typeof body.section === 'string') ? body.section : '';
+    const authCheck = await verifyAdminRequest(request);
+    if (!authCheck.authorized) {
+      return NextResponse.json(
+        { error: authCheck.error || 'Unauthorized: Admin access required for cache revalidation' },
+        { status: authCheck.status || 401 }
+      );
+    }
 
-    // Always revalidate the homepage layout and homepage itself
+    const body = await request.json().catch(() => ({}));
+    const rawSection = body && typeof body.section === 'string' ? body.section.trim() : '';
+
+    if (rawSection && !ALLOWED_REVALIDATE_SECTIONS.includes(rawSection as typeof ALLOWED_REVALIDATE_SECTIONS[number])) {
+      return NextResponse.json(
+        { error: 'Invalid section specified for revalidation' },
+        { status: 400 }
+      );
+    }
+
+    const section = rawSection || 'all';
+
+    // Always revalidate homepage layout and page
     revalidatePath('/', 'page');
     revalidatePath('/', 'layout');
 
     // Selectively revalidate dedicated pages based on updated section
-    if (!section || section === 'about' || section === 'aboutPage') {
+    if (section === 'all' || section === 'about' || section === 'aboutPage') {
       revalidatePath('/about', 'page');
     }
-    if (!section || section === 'book') {
+    if (section === 'all' || section === 'book' || section === 'products') {
       revalidatePath('/book', 'page');
-    }
-    if (!section || section === 'community' || section === 'communityPage' || section === 'callStructure') {
-      revalidatePath('/community', 'page');
-    }
-    if (!section || section === 'store' || section === 'storePage') {
       revalidatePath('/store', 'page');
     }
-    if (!section || section === 'contactPage') {
+    if (section === 'all' || section === 'community' || section === 'communityPage' || section === 'callStructure') {
+      revalidatePath('/community', 'page');
+    }
+    if (section === 'all' || section === 'store' || section === 'storePage' || section === 'products') {
+      revalidatePath('/store', 'page');
+    }
+    if (section === 'all' || section === 'contactPage' || section === 'settings') {
       revalidatePath('/contact', 'page');
     }
 
     return NextResponse.json({
       success: true,
       revalidated: true,
-      section: section || 'all',
+      section,
       timestamp: new Date().toISOString(),
     });
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Revalidation notice';
-    return NextResponse.json({ success: false, error: msg }, { status: 500 });
+    const msg = err instanceof Error ? err.message : 'Revalidation failed';
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }

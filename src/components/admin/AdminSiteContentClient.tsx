@@ -24,7 +24,8 @@ import {
   Mail,
 } from 'lucide-react';
 import Link from 'next/link';
-import { getSiteContentDoc, saveSiteContentDoc } from '@/lib/firebase/firestore';
+import { auth } from '@/lib/firebase/client';
+import { getSiteContentDoc } from '@/lib/firebase/firestore';
 import {
   HeroContent,
   StatsContent,
@@ -40,6 +41,7 @@ import {
   AboutPageContent,
   ContactPageContent,
   StorePageContent,
+  WhyUsContent,
 } from '@/types/site-content';
 import {
   DEFAULT_HERO_CONTENT,
@@ -56,6 +58,7 @@ import {
   DEFAULT_ABOUT_PAGE_CONTENT,
   DEFAULT_CONTACT_PAGE_CONTENT,
   DEFAULT_STORE_PAGE_CONTENT,
+  DEFAULT_WHY_US_CONTENT,
 } from '@/lib/firebase/content';
 
 type TabKey =
@@ -69,6 +72,7 @@ type TabKey =
   | 'oneOnOne'
   | 'about'
   | 'finalCta'
+  | 'whyUs'
   | 'communityPage'
   | 'aboutPage'
   | 'contactPage'
@@ -103,23 +107,23 @@ const TABS: TabDefinition[] = [
   },
   {
     key: 'teaching',
-    label: 'What I Teach',
+    label: 'Services & Offerings',
     category: 'homepage',
     icon: <Compass className="w-4 h-4" />,
-    previewUrl: '/#what-i-teach',
-    description: 'Practical curriculum cards (discovery, pricing, workflows, software).',
+    previewUrl: '/#services',
+    description: 'Professional bookkeeping & accounting service cards (Bookkeeping, Reporting, AP/AR, Tax Prep).',
   },
   {
     key: 'community',
-    label: 'Community Promo',
+    label: 'Community Section (Homepage)',
     category: 'homepage',
     icon: <Users className="w-4 h-4" />,
     previewUrl: '/#community',
-    description: 'Live mentorship overview, included benefits, and monthly membership pricing.',
+    description: 'Live mentorship overview, included benefits, and monthly membership pricing on the homepage.',
   },
   {
     key: 'callStructure',
-    label: 'Call Agenda',
+    label: 'Call Agenda (Homepage)',
     category: 'homepage',
     icon: <Calendar className="w-4 h-4" />,
     previewUrl: '/#community',
@@ -151,11 +155,19 @@ const TABS: TabDefinition[] = [
   },
   {
     key: 'about',
-    label: 'About Geetha',
+    label: 'About Section (Homepage)',
     category: 'homepage',
     icon: <Layers className="w-4 h-4" />,
     previewUrl: '/#about',
-    description: 'Founder biography, background story, and 3 core life/business priorities.',
+    description: 'Founder biography, background story, and 3 core life/business priorities on the homepage.',
+  },
+  {
+    key: 'whyUs',
+    label: 'Why Us Section',
+    category: 'homepage',
+    icon: <Check className="w-4 h-4" />,
+    previewUrl: '/#why-us',
+    description: 'Why Partner With Us benefits, core advantages, and consultation phone box on the homepage.',
   },
   {
     key: 'finalCta',
@@ -169,7 +181,7 @@ const TABS: TabDefinition[] = [
   // Dedicated Pages
   {
     key: 'communityPage',
-    label: 'Community Page',
+    label: 'Community Page (Full /community)',
     category: 'pages',
     icon: <Users className="w-4 h-4" />,
     previewUrl: '/community',
@@ -177,7 +189,7 @@ const TABS: TabDefinition[] = [
   },
   {
     key: 'aboutPage',
-    label: 'About Page',
+    label: 'About Page (Full /about)',
     category: 'pages',
     icon: <Layers className="w-4 h-4" />,
     previewUrl: '/about',
@@ -209,7 +221,7 @@ export default function AdminSiteContentClient() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Content state for all 14 managed sections
+  // Content state for all managed sections
   const [hero, setHero] = useState<HeroContent>(DEFAULT_HERO_CONTENT);
   const [stats, setStats] = useState<StatsContent>(DEFAULT_STATS_CONTENT);
   const [teaching, setTeaching] = useState<TeachingContent>(DEFAULT_TEACHING_CONTENT);
@@ -220,6 +232,7 @@ export default function AdminSiteContentClient() {
   const [oneOnOne, setOneOnOne] = useState<OneOnOneContent>(DEFAULT_ONE_ON_ONE_CONTENT);
   const [about, setAbout] = useState<AboutContent>(DEFAULT_ABOUT_CONTENT);
   const [finalCta, setFinalCta] = useState<FinalCTAContent>(DEFAULT_FINAL_CTA_CONTENT);
+  const [whyUs, setWhyUs] = useState<WhyUsContent>(DEFAULT_WHY_US_CONTENT);
   const [communityPage, setCommunityPage] = useState<CommunityPageContent>(DEFAULT_COMMUNITY_PAGE_CONTENT);
   const [aboutPage, setAboutPage] = useState<AboutPageContent>(DEFAULT_ABOUT_PAGE_CONTENT);
   const [contactPage, setContactPage] = useState<ContactPageContent>(DEFAULT_CONTACT_PAGE_CONTENT);
@@ -238,6 +251,7 @@ export default function AdminSiteContentClient() {
         call1on1Doc,
         aboutDoc,
         ctaDoc,
+        whyUsDoc,
         commPageDoc,
         aboutPageDoc,
         contactPageDoc,
@@ -253,6 +267,7 @@ export default function AdminSiteContentClient() {
         getSiteContentDoc<OneOnOneContent>('oneOnOne'),
         getSiteContentDoc<AboutContent>('about'),
         getSiteContentDoc<FinalCTAContent>('finalCta'),
+        getSiteContentDoc<WhyUsContent>('whyUs'),
         getSiteContentDoc<CommunityPageContent>('communityPage'),
         getSiteContentDoc<AboutPageContent>('aboutPage'),
         getSiteContentDoc<ContactPageContent>('contactPage'),
@@ -269,6 +284,7 @@ export default function AdminSiteContentClient() {
       if (call1on1Doc) setOneOnOne((prev) => ({ ...prev, ...call1on1Doc }));
       if (aboutDoc) setAbout((prev) => ({ ...prev, ...aboutDoc }));
       if (ctaDoc) setFinalCta((prev) => ({ ...prev, ...ctaDoc }));
+      if (whyUsDoc) setWhyUs((prev) => ({ ...prev, ...whyUsDoc }));
       if (commPageDoc) setCommunityPage((prev) => ({ ...prev, ...commPageDoc }));
       if (aboutPageDoc) setAboutPage((prev) => ({ ...prev, ...aboutPageDoc }));
       if (contactPageDoc) setContactPage((prev) => ({ ...prev, ...contactPageDoc }));
@@ -305,7 +321,7 @@ export default function AdminSiteContentClient() {
           break;
         case 'teaching':
           dataToSave = teaching;
-          sectionName = 'What I Teach';
+          sectionName = 'Services & Offerings';
           break;
         case 'community':
           dataToSave = community;
@@ -331,6 +347,10 @@ export default function AdminSiteContentClient() {
           dataToSave = about;
           sectionName = 'About Geetha';
           break;
+        case 'whyUs':
+          dataToSave = whyUs;
+          sectionName = 'Why Us Section';
+          break;
         case 'finalCta':
           dataToSave = finalCta;
           sectionName = 'Final CTA';
@@ -354,17 +374,23 @@ export default function AdminSiteContentClient() {
       }
 
       if (dataToSave) {
-        await saveSiteContentDoc(activeTab, dataToSave as Record<string, unknown>);
+        const token = await auth.currentUser?.getIdToken();
+        if (!token) {
+          throw new Error('Authentication required. Please sign in as an administrator.');
+        }
 
-        // Trigger on-demand Next.js static/ISR revalidation
-        try {
-          await fetch('/api/admin/site-content/revalidate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ section: activeTab }),
-          });
-        } catch (revErr) {
-          console.warn('[CMS] Background revalidation notice:', revErr);
+        const res = await fetch('/api/admin/site-content', {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({ section: activeTab, data: dataToSave }),
+        });
+
+        if (!res.ok) {
+          const errData = await res.json().catch(() => ({}));
+          throw new Error(errData.error || `Save failed with status ${res.status}`);
         }
       }
 
@@ -375,6 +401,40 @@ export default function AdminSiteContentClient() {
       setErrorMessage(msg);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const [repairing, setRepairing] = useState(false);
+
+  const handleRepairMissingDocs = async () => {
+    setRepairing(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    try {
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        throw new Error('Authentication required. Please sign in as an administrator.');
+      }
+
+      const res = await fetch('/api/admin/site-content', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ action: 'repair-missing' }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to repair CMS documents');
+      }
+      setSuccessMessage(data.message || 'CMS documents checked and verified.');
+      await loadAllContent();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error repairing CMS documents';
+      setErrorMessage(msg);
+    } finally {
+      setRepairing(false);
     }
   };
 
@@ -400,10 +460,12 @@ export default function AdminSiteContentClient() {
         return about.enabled !== false;
       case 'finalCta':
         return finalCta.enabled !== false;
+      case 'whyUs':
+        return whyUs.enabled !== false;
       case 'communityPage':
-        return communityPage.enabled !== false && communityPage.hero?.enabled !== false;
+        return communityPage.enabled !== false;
       case 'aboutPage':
-        return aboutPage.enabled !== false && aboutPage.hero?.enabled !== false;
+        return aboutPage.enabled !== false;
       case 'contactPage':
         return contactPage.enabled !== false;
       case 'storePage':
@@ -442,6 +504,9 @@ export default function AdminSiteContentClient() {
         break;
       case 'about':
         setAbout({ ...about, enabled: newState });
+        break;
+      case 'whyUs':
+        setWhyUs({ ...whyUs, enabled: newState });
         break;
       case 'finalCta':
         setFinalCta({ ...finalCta, enabled: newState });
@@ -491,6 +556,16 @@ export default function AdminSiteContentClient() {
         </div>
 
         <div className="flex items-center gap-3">
+          <button
+            onClick={handleRepairMissingDocs}
+            disabled={repairing || loading}
+            title="Scan Cloud Firestore site_content and initialize any missing section documents without overwriting existing data"
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#181918] bg-[#F0ECE1] border border-[#E2DBD0] rounded-lg hover:bg-[#E5DFD3] transition-colors"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${repairing ? 'animate-spin text-[#244634]' : ''}`} />
+            {repairing ? 'Auditing Docs...' : 'Audit CMS Docs'}
+          </button>
+
           <Link
             href={currentTabDef.previewUrl}
             target="_blank"
@@ -1981,6 +2056,105 @@ export default function AdminSiteContentClient() {
                     className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
                   />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* WHY US TAB */}
+          {activeTab === 'whyUs' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
+                    Eyebrow Badge
+                  </label>
+                  <input
+                    type="text"
+                    value={whyUs.eyebrow}
+                    onChange={(e) => setWhyUs({ ...whyUs, eyebrow: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
+                    Section Heading
+                  </label>
+                  <input
+                    type="text"
+                    value={whyUs.title}
+                    onChange={(e) => setWhyUs({ ...whyUs, title: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm font-semibold"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
+                  Intro Description
+                </label>
+                <textarea
+                  rows={3}
+                  value={whyUs.description}
+                  onChange={(e) => setWhyUs({ ...whyUs, description: e.target.value })}
+                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
+                    CTA Box Title
+                  </label>
+                  <input
+                    type="text"
+                    value={whyUs.ctaTitle || ''}
+                    onChange={(e) => setWhyUs({ ...whyUs, ctaTitle: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
+                    CTA Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    value={whyUs.ctaPhone || ''}
+                    onChange={(e) => setWhyUs({ ...whyUs, ctaPhone: e.target.value })}
+                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="p-4 rounded-xl bg-[#FAF7F2] border border-[#E2DBD0] space-y-4">
+                <h4 className="text-xs font-mono uppercase tracking-wider text-[#706E69] font-bold">
+                  Key Value Pillars & Reasons ({whyUs.reasons?.length || 0})
+                </h4>
+                {whyUs.reasons?.map((reason, idx) => (
+                  <div key={idx} className="p-3 bg-white rounded-lg border border-[#E2DBD0] space-y-2">
+                    <input
+                      type="text"
+                      value={reason.title}
+                      placeholder="Reason Title"
+                      onChange={(e) => {
+                        const newReasons = [...whyUs.reasons];
+                        newReasons[idx] = { ...newReasons[idx], title: e.target.value };
+                        setWhyUs({ ...whyUs, reasons: newReasons });
+                      }}
+                      className="w-full px-2.5 py-1.5 text-xs font-semibold rounded border border-[#D8D1C5]"
+                    />
+                    <textarea
+                      rows={2}
+                      value={reason.description}
+                      placeholder="Reason Description"
+                      onChange={(e) => {
+                        const newReasons = [...whyUs.reasons];
+                        newReasons[idx] = { ...newReasons[idx], description: e.target.value };
+                        setWhyUs({ ...whyUs, reasons: newReasons });
+                      }}
+                      className="w-full px-2.5 py-1.5 text-xs rounded border border-[#D8D1C5]"
+                    />
+                  </div>
+                ))}
               </div>
             </div>
           )}

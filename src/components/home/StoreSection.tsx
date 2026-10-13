@@ -24,7 +24,7 @@ export function StoreSection({ onBuyProduct, content }: StoreSectionProps) {
 
   React.useEffect(() => {
     fetchPublicStoreProducts().then((res) => {
-      if (res && res.length > 0) {
+      if (Array.isArray(res)) {
         setLiveProducts(res);
       }
     });

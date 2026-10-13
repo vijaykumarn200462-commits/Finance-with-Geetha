@@ -4,13 +4,15 @@ import React, { useState } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Hero } from '@/components/home/Hero';
 import { Stats } from '@/components/home/Stats';
-import { TeachingSection } from '@/components/home/TeachingSection';
 import { CommunitySection } from '@/components/home/CommunitySection';
 import { CallStructure } from '@/components/home/CallStructure';
 import { BookSection } from '@/components/home/BookSection';
 import { StoreSection } from '@/components/home/StoreSection';
 import { OneOnOneSection } from '@/components/home/OneOnOneSection';
 import { AboutSection } from '@/components/home/AboutSection';
+import { ServicesSection } from '@/components/home/ServicesSection';
+import { WhyUsSection } from '@/components/home/WhyUsSection';
+import { ContactSection } from '@/components/home/ContactSection';
 import { FinalCTA } from '@/components/home/FinalCTA';
 import { Footer } from '@/components/layout/Footer';
 import { MobileStickyBar } from '@/components/layout/MobileStickyBar';
@@ -32,6 +34,7 @@ import {
   DEFAULT_ONE_ON_ONE_CONTENT,
   DEFAULT_ABOUT_CONTENT,
   DEFAULT_FINAL_CTA_CONTENT,
+  DEFAULT_WHY_US_CONTENT,
 } from '@/lib/firebase/content';
 import {
   HeroContent,
@@ -44,13 +47,17 @@ import {
   OneOnOneContent,
   AboutContent,
   FinalCTAContent,
+  WhyUsContent,
 } from '@/types/site-content';
+
+import { InitialSiteContentInput } from '@/lib/firebase/content';
 
 interface HomePageClientProps {
   initialSections?: Record<string, Record<string, unknown>>;
+  initialContent?: InitialSiteContentInput;
 }
 
-export default function HomePageClient({ initialSections }: HomePageClientProps) {
+export default function HomePageClient({ initialSections, initialContent }: HomePageClientProps) {
   const [selectedProductId, setSelectedProductId] = useState<ProductId | null>(null);
   const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
   const [isSampleModalOpen, setIsSampleModalOpen] = useState(false);
@@ -58,7 +65,7 @@ export default function HomePageClient({ initialSections }: HomePageClientProps)
   const [envKeyRequired, setEnvKeyRequired] = useState<string | undefined>();
   const { selectedCurrency } = useCurrency();
 
-  const { isSectionEnabled, getSection } = useAllSiteContent(initialSections);
+  const { isSectionEnabled, getSection } = useAllSiteContent(initialContent || initialSections);
 
   const heroContent = getSection<HeroContent>('hero', DEFAULT_HERO_CONTENT);
   const statsContent = getSection<StatsContent>('stats', DEFAULT_STATS_CONTENT);
@@ -69,6 +76,7 @@ export default function HomePageClient({ initialSections }: HomePageClientProps)
   const storeContent = getSection<StoreSectionContent>('store', DEFAULT_STORE_SECTION_CONTENT);
   const oneOnOneContent = getSection<OneOnOneContent>('oneOnOne', DEFAULT_ONE_ON_ONE_CONTENT);
   const aboutContent = getSection<AboutContent>('about', DEFAULT_ABOUT_CONTENT);
+  const whyUsContent = getSection<WhyUsContent>('whyUs', DEFAULT_WHY_US_CONTENT);
   const finalCtaContent = getSection<FinalCTAContent>('finalCta', DEFAULT_FINAL_CTA_CONTENT);
 
   // Universal handler for product checkouts
@@ -156,18 +164,13 @@ export default function HomePageClient({ initialSections }: HomePageClientProps)
           />
         )}
 
-        {isSectionEnabled('stats') && <Stats content={statsContent} />}
+        {isSectionEnabled('about') && <AboutSection content={aboutContent} />}
 
-        {isSectionEnabled('teaching') && <TeachingSection content={teachingContent} />}
-
-        {isSectionEnabled('community') && (
-          <CommunitySection
-            content={communityContent}
-            onJoinClick={() => handleCheckout('community')}
-          />
+        {(isSectionEnabled('teaching') || isSectionEnabled('services')) && (
+          <ServicesSection content={teachingContent} />
         )}
 
-        {isSectionEnabled('callStructure') && <CallStructure content={callStructureContent} />}
+        {isSectionEnabled('whyUs') && <WhyUsSection content={whyUsContent} />}
 
         {isSectionEnabled('book') && (
           <BookSection
@@ -184,6 +187,17 @@ export default function HomePageClient({ initialSections }: HomePageClientProps)
           />
         )}
 
+        {isSectionEnabled('community') && (
+          <CommunitySection
+            content={communityContent}
+            onJoinClick={() => handleCheckout('community')}
+          />
+        )}
+
+        {isSectionEnabled('stats') && <Stats content={statsContent} />}
+
+        {isSectionEnabled('callStructure') && <CallStructure content={callStructureContent} />}
+
         {isSectionEnabled('oneOnOne') && (
           <OneOnOneSection
             content={oneOnOneContent}
@@ -191,7 +205,7 @@ export default function HomePageClient({ initialSections }: HomePageClientProps)
           />
         )}
 
-        {isSectionEnabled('about') && <AboutSection content={aboutContent} />}
+        {isSectionEnabled('contactPage') && <ContactSection enabled={isSectionEnabled('contactPage')} />}
 
         {isSectionEnabled('finalCta') && (
           <FinalCTA
