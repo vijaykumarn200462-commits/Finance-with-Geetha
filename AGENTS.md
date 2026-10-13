@@ -8,9 +8,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
-## Safe Git Commit & Push Protocol
+## Strict Manual-Only Git Policy
 
-AntiGravity does not possess a native automatic background push setting. When completing code tasks or when requested to commit and push changes, the agent MUST follow this strict protocol:
+NEVER automatically stage, commit, or push changes to GitHub. After completing a coding task, inspect and report the modified files and test results, then stop. Do not execute `git add`, `git commit`, `git push`, `npm run safe-push`, or any equivalent operation unless the user explicitly requests that Git operation in the current conversation. Do not interpret task completion, successful tests, or previous instructions as permission to commit or push. Leave all changes local and uncommitted by default.
+
+## Manual Commit & Push Protocol (Only When Explicitly Requested by User)
+
+When the user explicitly and directly requests a commit and push in the current conversation, the agent MUST follow these safety rules:
 
 1. **Pre-commit Inspection**:
    - Inspect `git status` and review changed files.

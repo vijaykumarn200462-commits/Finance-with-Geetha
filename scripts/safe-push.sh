@@ -2,7 +2,12 @@
 # ==============================================================================
 # safe-push.sh - Safe GitHub Commit & Push Workflow for Finance with Geetha
 # ==============================================================================
-# Enforces:
+# STRICT MANUAL-ONLY POLICY:
+# This script must NEVER be executed automatically by AI agents, IDE tasks, or
+# background processes upon task completion. It is solely an interactive utility
+# for manual invocation when the human user explicitly requests a commit and push.
+#
+# Enforces when manually run:
 #  1. Only pushes to branch 'main' on remote 'origin'
 #  2. Never force-pushes or rewrites history
 #  3. Secret scanning: never commits .env, credentials, service-account JSON, keys
