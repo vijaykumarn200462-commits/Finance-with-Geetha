@@ -122,32 +122,55 @@ export function getSafeFirebaseEnvDiagnostic(): SafeFirebaseEnvDiagnostic {
   const missingClient = getMissingClientEnvVars();
   const missingServer: string[] = [];
 
-  const projectId =
+  let projectId =
     process.env.FIREBASE_PROJECT_ID ||
     process.env.FIREBASE_ADMIN_PROJECT_ID ||
-    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  if (!projectId) {
-    missingServer.push('FIREBASE_PROJECT_ID');
-  }
+    process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+    DEFAULT_FIREBASE_CLIENT_CONFIG.projectId;
 
-  const clientEmail =
+  let clientEmail =
     process.env.FIREBASE_CLIENT_EMAIL ||
     process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-  if (!clientEmail || clientEmail.includes('placeholder')) {
-    missingServer.push('FIREBASE_CLIENT_EMAIL');
-  }
 
   let privateKey =
     process.env.FIREBASE_PRIVATE_KEY ||
     process.env.FIREBASE_ADMIN_PRIVATE_KEY;
+
+  const serviceAccountJson =
+    process.env.FIREBASE_SERVICE_ACCOUNT_KEY ||
+    process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON ||
+    process.env.FIREBASE_SERVICE_ACCOUNT;
+
+  if (serviceAccountJson && (!clientEmail || !privateKey)) {
+    try {
+      const parsed = JSON.parse(serviceAccountJson);
+      if (parsed.client_email && !clientEmail) clientEmail = parsed.client_email;
+      if (parsed.private_key && !privateKey) privateKey = parsed.private_key;
+      if (parsed.project_id && !projectId) projectId = parsed.project_id;
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!projectId) {
+    missingServer.push('FIREBASE_PROJECT_ID');
+  }
+
+  if (!clientEmail || clientEmail.includes('placeholder') || clientEmail.includes('your_') || !clientEmail.includes('@')) {
+    missingServer.push('FIREBASE_CLIENT_EMAIL');
+  }
+
   if (privateKey) {
     let key = privateKey.trim();
-    if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    while (
+      (key.startsWith('"') && key.endsWith('"')) ||
+      (key.startsWith("'") && key.endsWith("'"))
+    ) {
       key = key.slice(1, -1).trim();
     }
     privateKey = key;
   }
-  if (!privateKey || !privateKey.includes('PRIVATE KEY') || privateKey.includes('YOUR_PRIVATE_KEY')) {
+  if (!privateKey || !privateKey.includes('PRIVATE KEY') || privateKey.includes('YOUR_PRIVATE_KEY') || privateKey.includes('placeholder')) {
     missingServer.push('FIREBASE_PRIVATE_KEY');
   }
 

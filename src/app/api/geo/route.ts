@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { detectVisitorCountry } from '@/lib/geo/detect-country';
 import { getExchangeRates } from '@/lib/currency/exchange-service';
 import { SUPPORTED_CURRENCIES, CurrencyCode } from '@/lib/geo/country-currency';
-import { isFirebaseAdminConfigured, adminDb } from '@/lib/firebase/admin';
+import { isFirebaseAdminValid, adminDb } from '@/lib/firebase/admin';
 import { RegionalSettings } from '@/types/settings';
 
 const DEFAULT_REGIONAL_SETTINGS: RegionalSettings = {
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     // 1. Fetch admin regional settings from Firestore if configured
     let regionalSettings = DEFAULT_REGIONAL_SETTINGS;
 
-    if (isFirebaseAdminConfigured && adminDb) {
+    if (isFirebaseAdminValid() && adminDb) {
       try {
         const doc = await adminDb.collection('settings').doc('regional').get();
         if (doc.exists) {

@@ -1,5 +1,5 @@
 import { headers, cookies } from 'next/headers';
-import { adminAuth, adminDb, isFirebaseAdminConfigured } from './admin';
+import { adminAuth, adminDb, isFirebaseAdminValid, resolveAdminCredentials } from './admin';
 import { AdminRecord } from '@/types/admin';
 
 export interface VerifyAdminResult {
@@ -70,11 +70,27 @@ export async function verifyAdminRequest(request?: Request): Promise<VerifyAdmin
       };
     }
 
-    // If Firebase Admin credentials are not yet set in environment, check development notice
-    if (!isFirebaseAdminConfigured) {
-      console.warn(
-        'FIREBASE ADMIN NOTICE: Service account credentials are not configured in environment variables. Set FIREBASE_CLIENT_EMAIL and FIREBASE_PRIVATE_KEY.'
+    // Validate server environment BEFORE attempting token verification
+    if (!isFirebaseAdminValid()) {
+      const creds = resolveAdminCredentials();
+      const missing: string[] = [];
+      if (!creds.clientEmail) missing.push('FIREBASE_CLIENT_EMAIL');
+      if (!creds.privateKey) missing.push('FIREBASE_PRIVATE_KEY');
+
+      const details =
+        missing.length > 0
+          ? `Missing required server-side environment variables: ${missing.join(', ')}.`
+          : 'Firebase Admin credentials appear invalid or contain placeholder values.';
+
+      console.error(
+        `Firebase Admin Auth configuration error: ${details} Configure valid service-account credentials in .env.local or your hosting environment.`
       );
+
+      return {
+        authorized: false,
+        error: `Firebase Admin Auth is not configured. ${details}`,
+        status: 500,
+      };
     }
 
     // Verify token with Firebase Admin
@@ -122,10 +138,20 @@ export async function verifyAdminRequest(request?: Request): Promise<VerifyAdmin
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Invalid session or token';
     console.error('Server admin verification failed:', message);
+
+    const isConfigError =
+      message.includes('Firebase Admin') ||
+      message.includes('FIREBASE_') ||
+      message.includes('environment variables') ||
+      message.includes('service account') ||
+      message.includes('credential');
+
     return {
       authorized: false,
-      error: `Admin verification failed: ${message}`,
-      status: 401,
+      error: isConfigError
+        ? `Server configuration error: ${message}`
+        : `Admin verification failed: ${message}`,
+      status: isConfigError ? 500 : 401,
     };
   }
 }

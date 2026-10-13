@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminStorage, isFirebaseAdminConfigured } from '@/lib/firebase/admin';
+import { adminStorage, isFirebaseAdminValid } from '@/lib/firebase/admin';
 import { verifyAdminRequest } from '@/lib/firebase/admin-verify';
 
 export const dynamic = 'force-dynamic';
@@ -11,7 +11,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: authCheck.error }, { status: authCheck.status || 401 });
     }
 
-    if (!isFirebaseAdminConfigured) {
+    if (!isFirebaseAdminValid()) {
       return NextResponse.json({
         files: [],
         message: 'Firebase Admin Storage not configured in server environment.',

@@ -16,6 +16,48 @@ export interface AdminCredentials {
 }
 
 /**
+ * Safely ensures environment variables from .env.local are loaded into process.env
+ * if server-side credentials are not yet populated.
+ */
+function ensureEnvLoaded(): void {
+  if (typeof window !== 'undefined') return;
+
+  const hasCreds =
+    (process.env.FIREBASE_CLIENT_EMAIL || process.env.FIREBASE_ADMIN_CLIENT_EMAIL) &&
+    (process.env.FIREBASE_PRIVATE_KEY || process.env.FIREBASE_ADMIN_PRIVATE_KEY);
+
+  if (!hasCreds) {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { loadEnvConfig } = require('@next/env');
+      const projectDir = process.cwd();
+      loadEnvConfig(projectDir);
+
+      const stillMissing =
+        !process.env.FIREBASE_CLIENT_EMAIL &&
+        !process.env.FIREBASE_ADMIN_CLIENT_EMAIL &&
+        !process.env.FIREBASE_SERVICE_ACCOUNT_KEY &&
+        !process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+
+      if (stillMissing) {
+        // Fallback: search relative to this source directory (src/lib/firebase -> 3 levels up)
+        // eslint-disable-next-line @typescript-eslint/no-require-imports
+        const path = require('path');
+        const resolvedRoot = path.resolve(__dirname, '../../..');
+        if (resolvedRoot !== projectDir) {
+          loadEnvConfig(resolvedRoot);
+        }
+      }
+    } catch {
+      // Gracefully continue in non-Node or restricted runtimes
+    }
+  }
+}
+
+// Ensure environment is populated on module load
+ensureEnvLoaded();
+
+/**
  * Safely resolves and cleans Firebase Admin credentials from environment variables.
  * Handles:
  * - Standard project environment variables: FIREBASE_CLIENT_EMAIL, FIREBASE_PRIVATE_KEY, FIREBASE_PROJECT_ID
@@ -25,6 +67,8 @@ export interface AdminCredentials {
  * - Converts escaped newlines (\n, \r\n, \\n) into valid PEM newlines
  */
 export function resolveAdminCredentials(): AdminCredentials {
+  ensureEnvLoaded();
+
   let projectId =
     process.env.FIREBASE_PROJECT_ID ||
     process.env.FIREBASE_ADMIN_PROJECT_ID ||
@@ -66,11 +110,19 @@ export function resolveAdminCredentials(): AdminCredentials {
   if (rawPrivateKey) {
     let key = rawPrivateKey.trim();
     // Strip surrounding quotes
-    if ((key.startsWith('"') && key.endsWith('"')) || (key.startsWith("'") && key.endsWith("'"))) {
+    while (
+      (key.startsWith('"') && key.endsWith('"')) ||
+      (key.startsWith("'") && key.endsWith("'"))
+    ) {
       key = key.slice(1, -1).trim();
     }
     // Convert escaped newlines
-    key = key.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\r\n/g, '\n').replace(/\\r/g, '');
+    key = key
+      .replace(/\\\\n/g, '\n')
+      .replace(/\\r\\n/g, '\n')
+      .replace(/\\n/g, '\n')
+      .replace(/\r\n/g, '\n')
+      .replace(/\\r/g, '');
     privateKey = key;
   }
 
@@ -87,34 +139,44 @@ export function resolveAdminCredentials(): AdminCredentials {
  * Validates whether required server-side credentials are configured.
  */
 export function isFirebaseAdminValid(): boolean {
+  ensureEnvLoaded();
   const creds = resolveAdminCredentials();
   return Boolean(
     creds.clientEmail &&
+      creds.clientEmail.includes('@') &&
+      !creds.clientEmail.includes('placeholder') &&
+      !creds.clientEmail.includes('your_') &&
       creds.privateKey &&
       creds.privateKey.includes('PRIVATE KEY') &&
-      !creds.clientEmail.includes('placeholder')
+      !creds.privateKey.includes('YOUR_PRIVATE_KEY') &&
+      !creds.privateKey.includes('placeholder')
   );
 }
 
 export const isFirebaseAdminConfigured: boolean = isFirebaseAdminValid();
 
-let cachedApp: App | null = null;
-let cachedAuth: Auth | null = null;
-let cachedDb: Firestore | null = null;
-let cachedStorage: Storage | null = null;
+// Global singleton declarations to survive Next.js development reloads and HMR
+declare global {
+  var __firebaseAdminApp: App | undefined;
+  var __firebaseAdminAuth: Auth | undefined;
+  var __firebaseAdminDb: Firestore | undefined;
+  var __firebaseAdminStorage: Storage | undefined;
+}
 
 /**
  * Centralized, singleton Firebase Admin App getter.
  * Reuses existing Firebase Admin app instance to prevent duplicate initialization.
  */
 export function getAdminApp(): App {
-  if (cachedApp) return cachedApp;
+  if (globalThis.__firebaseAdminApp) {
+    return globalThis.__firebaseAdminApp;
+  }
 
   // Check if Firebase Admin app has already been initialized
   const existingApps = getApps();
   if (existingApps.length > 0) {
-    cachedApp = getApp();
-    return cachedApp;
+    globalThis.__firebaseAdminApp = getApp();
+    return globalThis.__firebaseAdminApp;
   }
 
   const creds = resolveAdminCredentials();
@@ -128,14 +190,18 @@ export function getAdminApp(): App {
     );
   }
 
-  if (!creds.privateKey.includes('PRIVATE KEY') || creds.clientEmail.includes('placeholder')) {
+  if (
+    !creds.privateKey.includes('PRIVATE KEY') ||
+    creds.clientEmail.includes('placeholder') ||
+    creds.privateKey.includes('YOUR_PRIVATE_KEY')
+  ) {
     throw new Error(
       'Firebase Admin credentials appear invalid or contain placeholder values. Please supply a valid service account private key.'
     );
   }
 
   try {
-    cachedApp = initializeApp({
+    globalThis.__firebaseAdminApp = initializeApp({
       credential: cert({
         projectId: creds.projectId,
         clientEmail: creds.clientEmail,
@@ -143,7 +209,7 @@ export function getAdminApp(): App {
       }),
       storageBucket: creds.storageBucket,
     });
-    return cachedApp;
+    return globalThis.__firebaseAdminApp;
   } catch (err: unknown) {
     const safeMsg = err instanceof Error ? err.message : 'Unknown initialization error';
     throw new Error(`Firebase Admin SDK failed to initialize: ${safeMsg}`);
@@ -154,30 +220,30 @@ export function getAdminApp(): App {
  * Singleton Firebase Admin Auth getter.
  */
 export function getAdminAuth(): Auth {
-  if (cachedAuth) return cachedAuth;
+  if (globalThis.__firebaseAdminAuth) return globalThis.__firebaseAdminAuth;
   const app = getAdminApp();
-  cachedAuth = getAuth(app);
-  return cachedAuth;
+  globalThis.__firebaseAdminAuth = getAuth(app);
+  return globalThis.__firebaseAdminAuth;
 }
 
 /**
  * Singleton Firebase Admin Firestore getter.
  */
 export function getAdminDb(): Firestore {
-  if (cachedDb) return cachedDb;
+  if (globalThis.__firebaseAdminDb) return globalThis.__firebaseAdminDb;
   const app = getAdminApp();
-  cachedDb = getFirestore(app);
-  return cachedDb;
+  globalThis.__firebaseAdminDb = getFirestore(app);
+  return globalThis.__firebaseAdminDb;
 }
 
 /**
  * Singleton Firebase Admin Storage getter.
  */
 export function getAdminStorage(): Storage {
-  if (cachedStorage) return cachedStorage;
+  if (globalThis.__firebaseAdminStorage) return globalThis.__firebaseAdminStorage;
   const app = getAdminApp();
-  cachedStorage = getStorage(app);
-  return cachedStorage;
+  globalThis.__firebaseAdminStorage = getStorage(app);
+  return globalThis.__firebaseAdminStorage;
 }
 
 /**

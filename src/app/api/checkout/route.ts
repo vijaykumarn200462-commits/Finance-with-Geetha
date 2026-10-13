@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isStripeConfigured, stripe, PRODUCT_NAMES } from '@/lib/stripe';
 import { ProductId } from '@/lib/types';
-import { isFirebaseAdminConfigured, adminDb } from '@/lib/firebase/admin';
+import { isFirebaseAdminValid, adminDb } from '@/lib/firebase/admin';
 import { isCurrencySupported, CurrencyCode, BASE_CURRENCY } from '@/lib/geo/country-currency';
 import { getExchangeRates, convertInrToTargetCurrency } from '@/lib/currency/exchange-service';
 
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     let resolvedProductName = productInfo.name;
 
     try {
-      if (isFirebaseAdminConfigured && adminDb) {
+      if (isFirebaseAdminValid() && adminDb) {
         const prodSnap = await adminDb.collection('products').doc(productId).get();
         if (prodSnap.exists) {
           const pData = prodSnap.data();

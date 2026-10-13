@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { adminDb, isFirebaseAdminConfigured } from '@/lib/firebase/admin';
+import { adminDb, isFirebaseAdminValid } from '@/lib/firebase/admin';
 import { isFirebaseClientConfigured, firebaseConfig, getSafeFirebaseEnvDiagnostic } from '@/lib/firebase/config';
 import { verifyAdminRequest } from '@/lib/firebase/admin-verify';
 
@@ -31,7 +31,7 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
       projectId: firebaseConfig.projectId,
       isFirebaseClientConfigured,
-      isFirebaseAdminConfigured,
+      isFirebaseAdminConfigured: isFirebaseAdminValid(),
       firestoreStatus,
       storageBucket: firebaseConfig.storageBucket,
       authDomain: firebaseConfig.authDomain,

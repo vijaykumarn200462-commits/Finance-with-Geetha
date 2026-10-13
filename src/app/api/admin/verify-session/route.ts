@@ -14,13 +14,15 @@ export async function GET(request: Request) {
         },
         { status: check.status || 401 }
       );
-      response.cookies.set('admin_session', '', {
-        path: '/',
-        maxAge: 0,
-        expires: new Date(0),
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-      });
+      if (check.status !== 500) {
+        response.cookies.set('admin_session', '', {
+          path: '/',
+          maxAge: 0,
+          expires: new Date(0),
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+        });
+      }
       return response;
     }
 
