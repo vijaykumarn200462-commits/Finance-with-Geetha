@@ -494,7 +494,7 @@ export function useAllSiteContent(initialInput?: InitialSiteContentInput) {
     return Object.keys(initialMap).length > 0;
   }, [initialInput, initialMap]);
 
-  const [sections, setSections] = useState<Record<string, Record<string, unknown>>>(initialMap);
+  const [liveSections, setLiveSections] = useState<Record<string, Record<string, unknown>> | null>(null);
   const [loading, setLoading] = useState<boolean>(!initialLoaded);
 
   useEffect(() => {
@@ -507,7 +507,7 @@ export function useAllSiteContent(initialInput?: InitialSiteContentInput) {
           snapshot.forEach((d) => {
             map[d.id] = d.data();
           });
-          setSections(map);
+          setLiveSections(map);
           setLoading(false);
         },
         (err) => {
@@ -520,6 +520,11 @@ export function useAllSiteContent(initialInput?: InitialSiteContentInput) {
       Promise.resolve().then(() => setLoading(false));
     }
   }, []);
+
+  const sections = useMemo(() => {
+    if (!liveSections) return initialMap;
+    return { ...initialMap, ...liveSections };
+  }, [initialMap, liveSections]);
 
   /**
    * Evaluates if a section is enabled:
@@ -723,10 +728,15 @@ export async function fetchPublicStoreProducts(): Promise<LocalProduct[]> {
 
     return docs.map((docSnap) => {
       const data = docSnap.data();
-      const rawId = (data.slug || docSnap.id) as string;
-      const validId: ProductId = (['community', 'book', 'cheatsheets', 'workflow', 'call'].includes(rawId)
-        ? rawId
-        : 'book') as ProductId;
+      const docId = docSnap.id as string;
+      const slugId = String(data.slug || '');
+      const validId: ProductId = (
+        ['community', 'book', 'cheatsheets', 'workflow', 'call'].includes(docId)
+          ? docId
+          : ['community', 'book', 'cheatsheets', 'workflow', 'call'].includes(slugId)
+          ? slugId
+          : docId
+      ) as ProductId;
 
       const numericPrice = Number(data.price || 0);
 

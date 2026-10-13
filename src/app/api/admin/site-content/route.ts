@@ -93,6 +93,21 @@ export async function PUT(request: Request) {
       { merge: true }
     );
 
+    // Sync products/book active state when book visibility changes
+    if (trimmedSection === 'book' && typeof (data as { enabled?: boolean }).enabled === 'boolean') {
+      try {
+        await adminDb.collection(COLLECTIONS.PRODUCTS).doc('book').set(
+          {
+            active: (data as { enabled?: boolean }).enabled,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      } catch (prodErr) {
+        console.warn('[CMS API] Could not sync products/book active status:', prodErr);
+      }
+    }
+
     // Automatic server-side ISR/Cache revalidation on successful write
     try {
       revalidatePath('/', 'page');

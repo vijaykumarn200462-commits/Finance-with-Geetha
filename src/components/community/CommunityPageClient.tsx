@@ -180,7 +180,7 @@ export default function CommunityPageClient({
         )}
 
         {/* Detailed Inside Every Call Component */}
-        <CallStructure content={callContent} />
+        {callContent?.enabled !== false && <CallStructure content={callContent} />}
 
         {/* Full Features Breakdown */}
         {commPage.benefits?.enabled !== false && benefitsList.length > 0 && (

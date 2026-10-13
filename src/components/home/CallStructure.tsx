@@ -9,7 +9,7 @@ interface CallStructureProps {
 }
 
 export function CallStructure({ content }: CallStructureProps) {
-  if (content && content.enabled === false) {
+  if (!content || content.enabled === false) {
     return null;
   }
 

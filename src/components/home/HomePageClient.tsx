@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Hero } from '@/components/home/Hero';
 import { Stats } from '@/components/home/Stats';
@@ -79,6 +79,25 @@ export default function HomePageClient({ initialSections, initialContent }: Home
   const whyUsContent = getSection<WhyUsContent>('whyUs', DEFAULT_WHY_US_CONTENT);
   const finalCtaContent = getSection<FinalCTAContent>('finalCta', DEFAULT_FINAL_CTA_CONTENT);
 
+  // Handle smooth scroll when navigating to hash anchors (e.g. /#about from another page)
+  useEffect(() => {
+    const handleHash = () => {
+      if (typeof window !== 'undefined' && window.location.hash) {
+        const targetId = window.location.hash.replace('#', '');
+        const el = document.getElementById(targetId);
+        if (el) {
+          setTimeout(() => {
+            el.scrollIntoView({ behavior: 'smooth' });
+          }, 150);
+        }
+      }
+    };
+
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
   // Universal handler for product checkouts
   const handleCheckout = async (productId: ProductId) => {
     try {
@@ -126,22 +145,26 @@ export default function HomePageClient({ initialSections, initialContent }: Home
         description:
           'Learn how to actually build a bookkeeping business. Flat pricing, discovery calls, QuickBooks workflow, and client retention.',
       },
-      {
-        '@type': 'Book',
-        name: 'Start a Bookkeeping Business',
-        author: {
-          '@type': 'Person',
-          name: 'Geetha',
-        },
-        bookFormat: 'EBook',
-        numberOfPages: 180,
-        offers: {
-          '@type': 'Offer',
-          price: '29.00',
-          priceCurrency: 'INR',
-          availability: 'https://schema.org/InStock',
-        },
-      },
+      ...(isSectionEnabled('book')
+        ? [
+            {
+              '@type': 'Book',
+              name: 'Start a Bookkeeping Business',
+              author: {
+                '@type': 'Person',
+                name: 'Geetha',
+              },
+              bookFormat: 'EBook',
+              numberOfPages: 180,
+              offers: {
+                '@type': 'Offer',
+                price: '29.00',
+                priceCurrency: 'INR',
+                availability: 'https://schema.org/InStock',
+              },
+            },
+          ]
+        : []),
     ],
   };
 
@@ -164,7 +187,7 @@ export default function HomePageClient({ initialSections, initialContent }: Home
           />
         )}
 
-        {isSectionEnabled('about') && <AboutSection content={aboutContent} />}
+        {isSectionEnabled('about') && <AboutSection content={aboutContent} id="about" />}
 
         {(isSectionEnabled('teaching') || isSectionEnabled('services')) && (
           <ServicesSection content={teachingContent} />
@@ -194,7 +217,12 @@ export default function HomePageClient({ initialSections, initialContent }: Home
           />
         )}
 
-        {isSectionEnabled('stats') && <Stats content={statsContent} />}
+        {isSectionEnabled('stats') && (
+          <Stats
+            content={statsContent}
+            id={isSectionEnabled('about') ? 'stats-section' : 'about'}
+          />
+        )}
 
         {isSectionEnabled('callStructure') && <CallStructure content={callStructureContent} />}
 
@@ -219,7 +247,9 @@ export default function HomePageClient({ initialSections, initialContent }: Home
       <Footer />
 
       {/* Mobile Sticky Floating CTA */}
-      <MobileStickyBar onJoinClick={() => handleCheckout('community')} />
+      {isSectionEnabled('community') && (
+        <MobileStickyBar onJoinClick={() => handleCheckout('community')} />
+      )}
 
       {/* Interactive Modals */}
       <CheckoutModal

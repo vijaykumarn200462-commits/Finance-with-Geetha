@@ -107,6 +107,24 @@ export function Navbar({ onOpenCommunityCheckout }: NavbarProps = {}) {
     { label: 'Contact', href: '/#contact' },
   ];
 
+  // Smooth scroll handler for hash links on the homepage
+  const handleHashLinkClick = (
+    e: React.MouseEvent<HTMLAnchorElement>,
+    href: string
+  ) => {
+    if (href.startsWith('/#') || href.startsWith('#')) {
+      const targetId = href.replace(/^\/?#/, '');
+      if (pathname === '/') {
+        e.preventDefault();
+        const element = document.getElementById(targetId);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+          window.history.pushState(null, '', `/#${targetId}`);
+        }
+      }
+    }
+  };
+
   // Secondary items nested under "More"
   const moreLinks = [
     {
@@ -178,6 +196,7 @@ export function Navbar({ onOpenCommunityCheckout }: NavbarProps = {}) {
                   <Link
                     key={link.label}
                     href={link.href}
+                    onClick={(e) => handleHashLinkClick(e, link.href)}
                     className={`text-xs xl:text-sm font-medium transition-colors hover:text-[#0f2c59] whitespace-nowrap py-1 ${
                       isActive
                         ? 'text-[#0f2c59] font-bold border-b-2 border-[#138354]'
@@ -390,7 +409,10 @@ export function Navbar({ onOpenCommunityCheckout }: NavbarProps = {}) {
                   <Link
                     key={link.label}
                     href={link.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
+                    onClick={(e) => {
+                      setIsMobileMenuOpen(false);
+                      handleHashLinkClick(e, link.href);
+                    }}
                     className="px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50 hover:text-[#0f2c59] transition-colors"
                   >
                     {link.label}

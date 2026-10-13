@@ -5,14 +5,15 @@ import { AboutContent } from '@/types/site-content';
 
 interface AboutSectionProps {
   content?: AboutContent;
+  id?: string;
 }
 
-export function AboutSection({ content }: AboutSectionProps) {
+export function AboutSection({ content, id = 'about' }: AboutSectionProps) {
   if (content && content.enabled === false) {
     return null;
   }
 
-  const eyebrow = content?.eyebrow || 'About Geetha N.';
+  const eyebrow = content?.eyebrow || 'ABOUT GEETHA N.';
   const title = content?.title || 'Your Trusted Financial Partner';
   const paragraphs = content?.paragraphs || [
     'Running a business is demanding enough without the added stress of messy receipts, untracked expenses, and end-of-year tax scrambles. As an experienced bookkeeping and accounting professional, I provide meticulous record-keeping, accurate reconciliations, and clear financial reporting designed to give you absolute peace of mind.',
@@ -37,47 +38,67 @@ export function AboutSection({ content }: AboutSectionProps) {
   ];
 
   return (
-    <section id="about" className="py-20 sm:py-24 bg-white border-y border-slate-100">
+    <section
+      id={id}
+      className="py-16 sm:py-24 border-y border-[#E8E2D7] bg-[#F4EFE6]/70 scroll-mt-24 sm:scroll-mt-28"
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="max-w-3xl mx-auto text-center space-y-4">
-          <span className="text-xs font-semibold text-[#138354] uppercase tracking-widest inline-block bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+        {/* Section Heading & Intro */}
+        <div className="max-w-3xl mx-auto text-center mb-12 sm:mb-16">
+          <span className="inline-block bg-emerald-50 text-[#138354] border border-emerald-100 uppercase tracking-widest font-mono text-xs px-3.5 py-1.5 rounded-full font-semibold">
             {eyebrow}
           </span>
-          <h2 className="text-3xl sm:text-4xl font-serif font-bold text-[#0f2c59] tracking-tight">
+          <h2 className="font-serif font-bold text-3xl sm:text-4xl lg:text-5xl text-[#0f2c59] mt-3.5 tracking-tight">
             {title}
           </h2>
-          <div className="w-20 h-1 bg-[#138354] mx-auto rounded-full my-2" />
-          <div className="space-y-4 text-slate-600 text-base sm:text-lg leading-relaxed pt-2">
+          <div className="w-20 h-1 bg-[#138354] mx-auto rounded-full my-3.5" />
+          <div className="space-y-4 text-slate-600 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto font-normal mt-4">
             {paragraphs.map((p, idx) => (
               <p key={idx}>{p}</p>
             ))}
           </div>
         </div>
 
-        {/* 3 Benefit Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-16">
+        {/* 3 Benefit Cards Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto items-stretch">
           {benefits.map((item, idx) => {
             const Icon = item.icon;
+            const isThirdCard = idx === 2;
             return (
               <div
                 key={idx}
-                className="bg-[#f8fafc] p-8 rounded-2xl border border-slate-200 text-center hover:shadow-lg transition-all duration-200 group hover:-translate-y-0.5"
+                className={`bg-white border border-[#E2DBD0] rounded-2xl p-6 sm:p-8 text-center flex flex-col justify-between shadow-xs hover:shadow-md hover:border-[#138354]/40 transition-all duration-300 group hover:-translate-y-0.5 h-full ${
+                  isThirdCard ? 'md:col-span-2 lg:col-span-1 md:max-w-md md:mx-auto md:w-full' : ''
+                }`}
               >
-                <div className="w-14 h-14 bg-[#0f2c59]/10 text-[#0f2c59] rounded-2xl flex items-center justify-center mx-auto mb-6 text-xl group-hover:bg-[#138354] group-hover:text-white transition-colors">
-                  <Icon className="w-7 h-7" />
+                <div className="flex-1 flex flex-col justify-between">
+                  <div>
+                    {/* Icon Container */}
+                    <div className="w-14 h-14 rounded-2xl bg-[#EAF0EC] text-[#138354] flex items-center justify-center mx-auto mb-6 group-hover:bg-[#138354] group-hover:text-white transition-colors duration-200">
+                      <Icon className="w-7 h-7" />
+                    </div>
+
+                    {/* Card Heading */}
+                    <h3 className="font-serif font-bold text-xl sm:text-2xl text-[#0f2c59] tracking-tight mb-3">
+                      {item.title}
+                    </h3>
+
+                    {/* Subtle Card Divider */}
+                    <div className="w-12 h-0.5 bg-[#E8E2D7] mx-auto my-3.5 group-hover:bg-[#138354]/50 transition-colors" />
+                  </div>
+
+                  {/* Card Description */}
+                  <p className="text-sm text-[#5C5E5B] leading-relaxed pt-1">
+                    {item.desc}
+                  </p>
                 </div>
-                <h3 className="text-lg font-bold text-[#0f2c59] mb-2 font-serif">
-                  {item.title}
-                </h3>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  {item.desc}
-                </p>
               </div>
             );
           })}
         </div>
 
-        <div className="text-center pt-12">
+        {/* Link to Dedicated About Page */}
+        <div className="text-center pt-10 sm:pt-12">
           <Link
             href="/about"
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f2c59] hover:text-[#138354] underline underline-offset-4 transition-colors"
