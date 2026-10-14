@@ -15,6 +15,7 @@ import {
 export const dynamic = 'force-dynamic';
 
 const ALLOWED_CMS_SECTIONS = [
+  'branding',
   'hero',
   'stats',
   'teaching',
@@ -108,11 +109,33 @@ export async function PUT(request: Request) {
       }
     }
 
+    // Sync businessName to settings/general if branding is updated
+    if (trimmedSection === 'branding' && typeof (data as { businessName?: string }).businessName === 'string') {
+      try {
+        await adminDb.collection(COLLECTIONS.SETTINGS).doc('general').set(
+          {
+            businessName: (data as { businessName?: string }).businessName,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      } catch (genErr) {
+        console.warn('[CMS API] Could not sync settings/general businessName:', genErr);
+      }
+    }
+
     // Automatic server-side ISR/Cache revalidation on successful write
     try {
       revalidatePath('/', 'page');
       revalidatePath('/', 'layout');
 
+      if (trimmedSection === 'branding') {
+        revalidatePath('/about', 'page');
+        revalidatePath('/store', 'page');
+        revalidatePath('/contact', 'page');
+        revalidatePath('/community', 'page');
+        revalidatePath('/book', 'page');
+      }
       if (trimmedSection === 'about' || trimmedSection === 'aboutPage') {
         revalidatePath('/about', 'page');
       }

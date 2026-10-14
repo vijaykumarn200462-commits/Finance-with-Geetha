@@ -26,6 +26,10 @@ const auth: Auth = getAuth(app);
 const db: Firestore = getFirestore(app);
 const storage: FirebaseStorage = getStorage(app);
 
+// Configure realistic retry timeout (5s) so missing buckets or network outages fail fast instead of hanging for 10 minutes (600,000ms default)
+storage.maxUploadRetryTime = 5000;
+storage.maxOperationRetryTime = 5000;
+
 export function getFirebaseApp(): FirebaseApp {
   return app;
 }

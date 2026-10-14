@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import {
   Save,
   Check,
@@ -340,6 +341,33 @@ export default function AdminSettingsClient() {
                       onChange={(e) => setGeneral({ ...general, currency: e.target.value })}
                       className="w-full px-3.5 py-2 text-sm border border-[#E2DBD0] rounded-lg"
                     />
+                  </div>
+                </div>
+
+                {/* Profile Photo Quick Access */}
+                <div className="pt-4 border-t border-[#E2DBD0]">
+                  <div className="p-4 rounded-xl bg-[#FAF7F2] border border-[#E2DBD0] flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl overflow-hidden border-2 border-[#0f2c59] bg-slate-100 shrink-0 shadow-xs">
+                        <img
+                          src="/images/geetha-profile.jpg"
+                          alt="Geetha N."
+                          className="w-full h-full object-cover object-center"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-[#181918]">Geetha N. Profile Photograph</p>
+                        <p className="text-[11px] text-[#706E69]">
+                          Centrally managed in CMS Site Content (Hero Banner). Displayed in hero card, navbar, and footer.
+                        </p>
+                      </div>
+                    </div>
+                    <Link
+                      href="/admin/site-content"
+                      className="px-4 py-2 rounded-lg bg-[#244634] text-white text-xs font-semibold hover:bg-emerald-800 transition-colors shrink-0 shadow-xs"
+                    >
+                      Manage Profile Photo
+                    </Link>
                   </div>
                 </div>
               </div>

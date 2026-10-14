@@ -1,12 +1,38 @@
+export interface BrandingContent {
+  enabled?: boolean;
+  businessName: string;
+  tagline: string;
+  logoUrl?: string;
+  faviconUrl?: string;
+  showLogo?: boolean;
+  showBusinessName?: boolean;
+  showTagline?: boolean;
+  logoSize?: 'small' | 'medium' | 'large';
+  updatedAt?: string;
+}
+
 export interface HeroContent {
   enabled?: boolean;
   eyebrow: string;
   headline: string;
   supportingCopy: string;
-  credibilityQuote: string;
-  credibilityAuthor: string;
-  primaryButtonText: string;
-  secondaryButtonText: string;
+  credibilityQuote?: string;
+  credibilityAuthor?: string;
+  primaryButtonText?: string;
+  primaryButtonLink?: string;
+  secondaryButtonText?: string;
+  secondaryButtonLink?: string;
+  trustIndicator1?: string;
+  trustIndicator2?: string;
+  showTrustIndicators?: boolean;
+  showProfileCard?: boolean;
+  profileImageUrl?: string;
+  profileName?: string;
+  profileRole?: string;
+  profileDescription?: string;
+  profilePhone?: string;
+  profileEmail?: string;
+  updatedAt?: string;
 }
 
 export interface StatItem {
@@ -105,20 +131,31 @@ export interface OneOnOneContent {
   buttonText: string;
 }
 
+export interface AboutFeatureCard {
+  id?: string;
+  enabled?: boolean;
+  title: string;
+  description: string;
+  icon?: string;
+}
+
 export interface AboutContent {
   enabled?: boolean;
   eyebrow: string;
   title: string;
-  subtitle: string;
-  paragraphs: string[];
-  faithTitle: string;
-  faithDescription: string;
-  familyTitle: string;
-  familyDescription: string;
-  businessTitle: string;
-  businessDescription: string;
-  signature: string;
-  location: string;
+  subtitle?: string;
+  description?: string;
+  paragraphs?: string[];
+  cards?: AboutFeatureCard[];
+  stats?: StatItem[];
+  faithTitle?: string;
+  faithDescription?: string;
+  familyTitle?: string;
+  familyDescription?: string;
+  businessTitle?: string;
+  businessDescription?: string;
+  signature?: string;
+  location?: string;
   updatedAt?: string;
 }
 
@@ -190,6 +227,8 @@ export interface ContactPageContent {
   title: string;
   subtitle: string;
   supportEmail: string;
+  phone?: string;
+  workingHours?: string;
   directCopy: string;
   formEnabled: boolean;
   availabilityNote: string;
@@ -235,5 +274,6 @@ export interface SiteContentMap {
   storePage: StorePageContent;
   whyUs?: WhyUsContent;
   services?: TeachingContent;
+  branding?: BrandingContent;
 }
 

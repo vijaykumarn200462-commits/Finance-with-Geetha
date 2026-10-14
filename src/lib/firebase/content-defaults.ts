@@ -23,6 +23,7 @@ import {
   ContactPageContent,
   StorePageContent,
   WhyUsContent,
+  BrandingContent,
 } from '@/types/site-content';
 
 export interface DynamicPricing {
@@ -41,25 +42,52 @@ export const DEFAULT_PRICES: DynamicPricing = {
   call: 150,
 };
 
+export const DEFAULT_PROFILE_IMAGE = '/images/geetha-profile.jpg';
+
 // ==========================================
 // DEFAULT SITE CONTENT DEFINITIONS
 // ==========================================
 
+export const DEFAULT_BRANDING_CONTENT: BrandingContent = {
+  enabled: true,
+  businessName: 'Finance with Geetha',
+  tagline: 'Bookkeeping & Accounting',
+  logoUrl: DEFAULT_PROFILE_IMAGE,
+  faviconUrl: '',
+  showLogo: true,
+  showBusinessName: true,
+  showTagline: true,
+  logoSize: 'medium',
+};
+
 export const DEFAULT_HERO_CONTENT: HeroContent = {
   enabled: true,
-  eyebrow: 'FINANCE & BOOKKEEPING COACHING',
-  headline: 'Learn how to actually build a bookkeeping business.',
+  eyebrow: 'PROFESSIONAL ACCOUNTING & BOOKKEEPING',
+  headline: 'Take Control of Your Business Finances',
   supportingCopy:
-    'Pricing. Discovery calls. Onboarding. The real work in software. How to talk to clients — and even how to build your website.',
+    'Accurate, reliable, and stress-free bookkeeping services tailored for businesses. Let Geetha N. manage your books so you can focus on growing your business.',
   credibilityQuote:
-    "I've run my own firm for five years. Now I teach other professionals exactly how I did it.",
-  credibilityAuthor: 'Geetha, Founder of Finance with Geetha',
-  primaryButtonText: 'Join the Community',
-  secondaryButtonText: 'Start with the Book — ₹29',
+    "I've run my own firm for five years. Now I bring that depth of practical expertise directly to your financial operations.",
+  credibilityAuthor: 'Geetha N., Independent Bookkeeper & Accountant',
+  primaryButtonText: 'Schedule Consultation',
+  primaryButtonLink: '/#contact',
+  secondaryButtonText: 'View Services',
+  secondaryButtonLink: '/#services',
+  trustIndicator1: '100% Confidential',
+  trustIndicator2: 'Tailored Solutions',
+  showTrustIndicators: true,
+  showProfileCard: true,
+  profileImageUrl: DEFAULT_PROFILE_IMAGE,
+  profileName: 'Geetha N.',
+  profileRole: 'Independent Bookkeeper & Accountant',
+  profileDescription:
+    'Dedicated financial partner helping you maintain clean books and clear financial insights.',
+  profilePhone: '9538913912',
+  profileEmail: 'Cageethanofficail@gmail.com',
 };
 
 export const DEFAULT_STATS_CONTENT: StatsContent = {
-  enabled: true,
+  enabled: false,
   eyebrow: 'The Track Record',
   title: 'Real business. Real numbers.',
   subtitle: 'Not projections. My actual business.',
@@ -133,7 +161,7 @@ export const DEFAULT_BOOK_SECTION_CONTENT: BookSectionContent = {
 };
 
 export const DEFAULT_STORE_SECTION_CONTENT: StoreSectionContent = {
-  enabled: true,
+  enabled: false,
   eyebrow: 'Plug & Play Operations',
   title: 'Templates & Cheat Sheets',
   description:
@@ -161,13 +189,37 @@ export const DEFAULT_ONE_ON_ONE_CONTENT: OneOnOneContent = {
 
 export const DEFAULT_ABOUT_CONTENT: AboutContent = {
   enabled: true,
-  eyebrow: 'Founder & Working Professional',
-  title: "Hi, I'm Geetha.",
-  subtitle: 'Firm owner, mentor, and coach.',
+  eyebrow: 'ABOUT GEETHA N.',
+  title: 'Your Trusted Financial Partner',
+  subtitle:
+    'Running a business is demanding enough without the added stress of messy receipts, untracked expenses, and end-of-year tax scrambles. As an experienced bookkeeping and accounting professional, I provide meticulous record-keeping, accurate reconciliations, and clear financial reporting designed to give you absolute peace of mind.',
+  description:
+    'Running a business is demanding enough without the added stress of messy receipts, untracked expenses, and end-of-year tax scrambles. As an experienced bookkeeping and accounting professional, I provide meticulous record-keeping, accurate reconciliations, and clear financial reporting designed to give you absolute peace of mind.',
   paragraphs: [
-    'I built this practice from the ground up. Five years later it runs around 60 clients — in about 30 hours a week.',
-    'I built a business that fits around my life, not one that consumes it.',
-    'Now I help other professionals build the same thing: a calm, profitable business, one client at a time.',
+    'Running a business is demanding enough without the added stress of messy receipts, untracked expenses, and end-of-year tax scrambles. As an experienced bookkeeping and accounting professional, I provide meticulous record-keeping, accurate reconciliations, and clear financial reporting designed to give you absolute peace of mind.',
+  ],
+  cards: [
+    {
+      id: 'card-1',
+      enabled: true,
+      title: 'Absolute Accuracy',
+      description:
+        'Every entry, ledger, and reconciliation is handled with precision to eliminate discrepancies and errors.',
+    },
+    {
+      id: 'card-2',
+      enabled: true,
+      title: 'Save Time & Energy',
+      description:
+        'Delegate tedious paperwork and financial tracking so you can focus entirely on core business operations.',
+    },
+    {
+      id: 'card-3',
+      enabled: true,
+      title: 'Personalized Approach',
+      description:
+        'Tailored financial packages and customized reporting that fit your unique business requirements.',
+    },
   ],
   faithTitle: 'Integrity first.',
   faithDescription: 'Rooted in clear principles, precision, and purpose.',
@@ -175,7 +227,7 @@ export const DEFAULT_ABOUT_CONTENT: AboutContent = {
   familyDescription: 'Being fully present for family and daily life beyond work.',
   businessTitle: 'Sustainable business third.',
   businessDescription: 'Serving clients excellently without letting work run your life.',
-  signature: '— Geetha',
+  signature: '— Geetha N.',
   location: 'Finance with Geetha',
 };
 
@@ -315,12 +367,14 @@ export const DEFAULT_ABOUT_PAGE_CONTENT: AboutPageContent = {
 
 export const DEFAULT_CONTACT_PAGE_CONTENT: ContactPageContent = {
   enabled: true,
-  title: 'Get in Touch',
-  subtitle: 'Have a question about the community, book, or 1-on-1 coaching? Send a note directly to Geetha.',
-  supportEmail: 'cageethanofficial@gmail.com',
-  directCopy: 'Geetha reviews every inquiry personally and responds within 24–48 business hours.',
+  title: 'Let’s Discuss Your Business Accounting',
+  subtitle: 'Reach out directly via phone or email, or drop a message using the form below.',
+  supportEmail: 'Cageethanofficail@gmail.com',
+  phone: '9538913912',
+  workingHours: 'Monday – Saturday: 9:00 AM – 6:00 PM',
+  directCopy: 'Geetha reviews every inquiry personally and responds within 24 business hours.',
   formEnabled: true,
-  availabilityNote: 'Coaching inquiries are open. Live calls run weekly.',
+  availabilityNote: 'Consultation inquiries are open. Direct phone appointments available.',
 };
 
 export const DEFAULT_STORE_PAGE_CONTENT: StorePageContent = {
@@ -370,5 +424,6 @@ export const DEFAULT_SITE_CONTENT = {
   contactPage: DEFAULT_CONTACT_PAGE_CONTENT,
   storePage: DEFAULT_STORE_PAGE_CONTENT,
   whyUs: DEFAULT_WHY_US_CONTENT,
+  branding: DEFAULT_BRANDING_CONTENT,
 };
 

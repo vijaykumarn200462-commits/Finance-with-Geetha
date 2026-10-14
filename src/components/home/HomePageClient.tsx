@@ -35,6 +35,8 @@ import {
   DEFAULT_ABOUT_CONTENT,
   DEFAULT_FINAL_CTA_CONTENT,
   DEFAULT_WHY_US_CONTENT,
+  DEFAULT_CONTACT_PAGE_CONTENT,
+  DEFAULT_BRANDING_CONTENT,
 } from '@/lib/firebase/content';
 import {
   HeroContent,
@@ -48,6 +50,8 @@ import {
   AboutContent,
   FinalCTAContent,
   WhyUsContent,
+  ContactPageContent,
+  BrandingContent,
 } from '@/types/site-content';
 
 import { InitialSiteContentInput } from '@/lib/firebase/content';
@@ -78,24 +82,44 @@ export default function HomePageClient({ initialSections, initialContent }: Home
   const aboutContent = getSection<AboutContent>('about', DEFAULT_ABOUT_CONTENT);
   const whyUsContent = getSection<WhyUsContent>('whyUs', DEFAULT_WHY_US_CONTENT);
   const finalCtaContent = getSection<FinalCTAContent>('finalCta', DEFAULT_FINAL_CTA_CONTENT);
+  const contactPageContent = getSection<ContactPageContent>('contactPage', DEFAULT_CONTACT_PAGE_CONTENT);
+  const brandingContent = getSection<BrandingContent>('branding', DEFAULT_BRANDING_CONTENT);
 
-  // Handle smooth scroll when navigating to hash anchors (e.g. /#about from another page)
+  // Handle smooth scroll when navigating to hash anchors (e.g. /#about from another page or direct URL)
   useEffect(() => {
-    const handleHash = () => {
-      if (typeof window !== 'undefined' && window.location.hash) {
-        const targetId = window.location.hash.replace('#', '');
+    const scrollToTarget = () => {
+      if (typeof window === 'undefined' || !window.location.hash) return;
+      const targetId = window.location.hash.replace(/^\/?#/, '');
+      if (!targetId) return;
+
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const behavior: ScrollBehavior = prefersReducedMotion ? 'auto' : 'smooth';
+
+      let attempts = 0;
+      const maxAttempts = 20; // 20 * 50ms = 1000ms max
+      const interval = setInterval(() => {
+        attempts++;
         const el = document.getElementById(targetId);
         if (el) {
-          setTimeout(() => {
-            el.scrollIntoView({ behavior: 'smooth' });
-          }, 150);
+          clearInterval(interval);
+          el.scrollIntoView({ behavior });
+        } else if (attempts >= maxAttempts) {
+          clearInterval(interval);
         }
-      }
+      }, 50);
     };
 
-    handleHash();
-    window.addEventListener('hashchange', handleHash);
-    return () => window.removeEventListener('hashchange', handleHash);
+    // Execute on initial render
+    scrollToTarget();
+
+    // Listen to hash changes (in-page anchor clicks) and history navigation (back/forward)
+    window.addEventListener('hashchange', scrollToTarget);
+    window.addEventListener('popstate', scrollToTarget);
+
+    return () => {
+      window.removeEventListener('hashchange', scrollToTarget);
+      window.removeEventListener('popstate', scrollToTarget);
+    };
   }, []);
 
   // Universal handler for product checkouts
@@ -176,7 +200,11 @@ export default function HomePageClient({ initialSections, initialContent }: Home
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
 
-      <Navbar onOpenCommunityCheckout={() => handleCheckout('community')} />
+      <Navbar
+        onOpenCommunityCheckout={() => handleCheckout('community')}
+        profileImageUrl={heroContent?.profileImageUrl}
+        branding={brandingContent}
+      />
 
       <main className="flex-1">
         {isSectionEnabled('hero') && (
@@ -217,10 +245,10 @@ export default function HomePageClient({ initialSections, initialContent }: Home
           />
         )}
 
-        {isSectionEnabled('stats') && (
+        {isSectionEnabled('stats') && !isSectionEnabled('about') && (
           <Stats
             content={statsContent}
-            id={isSectionEnabled('about') ? 'stats-section' : 'about'}
+            id="stats-section"
           />
         )}
 
@@ -233,7 +261,12 @@ export default function HomePageClient({ initialSections, initialContent }: Home
           />
         )}
 
-        {isSectionEnabled('contactPage') && <ContactSection enabled={isSectionEnabled('contactPage')} />}
+        {isSectionEnabled('contactPage') && (
+          <ContactSection
+            content={contactPageContent}
+            enabled={isSectionEnabled('contactPage')}
+          />
+        )}
 
         {isSectionEnabled('finalCta') && (
           <FinalCTA
@@ -244,7 +277,7 @@ export default function HomePageClient({ initialSections, initialContent }: Home
         )}
       </main>
 
-      <Footer />
+      <Footer profileImageUrl={heroContent?.profileImageUrl} />
 
       {/* Mobile Sticky Floating CTA */}
       {isSectionEnabled('community') && (

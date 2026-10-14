@@ -24,36 +24,72 @@ export function uploadFileWithProgress(
   onProgress?: (percent: number) => void
 ): Promise<string> {
   return new Promise((resolve, reject) => {
+    let completed = false;
+    let timeoutTimer: NodeJS.Timeout | null = null;
+
     try {
       const storageRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(storageRef, file);
 
+      // Safety timeout: if upload has 0 progress after 6 seconds (e.g. bucket doesn't exist and SDK retry loop triggers), cancel task
+      timeoutTimer = setTimeout(() => {
+        if (!completed && uploadTask.snapshot.bytesTransferred === 0) {
+          uploadTask.cancel();
+          reject(
+            new Error(
+              'Firebase Storage upload timed out after 6 seconds. The storage bucket is either unreachable or not yet provisioned in Firebase Console.'
+            )
+          );
+        }
+      }, 6000);
+
       uploadTask.on(
         'state_changed',
         (snapshot) => {
-          const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
-          if (onProgress) {
-            onProgress(Math.round(progress));
+          if (snapshot.state === 'running') {
+            const progress = snapshot.totalBytes > 0
+              ? (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+              : 0;
+            if (onProgress) {
+              onProgress(Math.round(progress));
+            }
+          } else if (snapshot.state === 'paused') {
+            console.warn('[Firebase Storage] Upload is paused.');
           }
         },
         (error) => {
-          console.error('Storage upload error:', error);
-          const isBucketNotFound =
-            (error as { code?: string })?.code === 'storage/bucket-not-found' ||
-            (error as { message?: string })?.message?.includes('bucket does not exist');
-          if (isBucketNotFound) {
+          completed = true;
+          if (timeoutTimer) clearTimeout(timeoutTimer);
+          console.error('[Firebase Storage] Upload task error:', error);
+
+          const errCode = (error as { code?: string })?.code || '';
+          const errMsg = (error as { message?: string })?.message || '';
+
+          if (
+            errCode === 'storage/bucket-not-found' ||
+            errCode === 'storage/retry-limit-exceeded' ||
+            errMsg.includes('bucket does not exist') ||
+            errMsg.includes('404')
+          ) {
             reject(
               new Error(
-                'Firebase Storage bucket has not yet been provisioned in the Firebase Console. Please activate Cloud Storage in the Firebase Console (Build > Storage) for project geetha-coaching.'
+                'Firebase Storage bucket has not been provisioned or is unreachable for project geetha-coaching.'
               )
             );
+          } else if (errCode === 'storage/unauthorized') {
+            reject(new Error('Permission denied. You must be an authorized administrator to upload files.'));
+          } else if (errCode === 'storage/canceled') {
+            reject(new Error('Upload was canceled or timed out.'));
           } else {
             reject(error);
           }
         },
         async () => {
+          completed = true;
+          if (timeoutTimer) clearTimeout(timeoutTimer);
           try {
             const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+            if (onProgress) onProgress(100);
             resolve(downloadUrl);
           } catch (err) {
             reject(err);
@@ -61,6 +97,7 @@ export function uploadFileWithProgress(
         }
       );
     } catch (err) {
+      if (timeoutTimer) clearTimeout(timeoutTimer);
       reject(err);
     }
   });

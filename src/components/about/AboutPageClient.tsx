@@ -9,6 +9,8 @@ import { ArrowRight } from 'lucide-react';
 import { MobileStickyBar } from '@/components/layout/MobileStickyBar';
 import {
   useSectionContent,
+  useProfilePhoto,
+  DEFAULT_PROFILE_IMAGE,
   DEFAULT_ABOUT_PAGE_CONTENT,
 } from '@/lib/firebase/content';
 import { AboutPageContent } from '@/types/site-content';
@@ -19,6 +21,7 @@ interface AboutPageClientProps {
 
 export default function AboutPageClient({ initialData }: AboutPageClientProps) {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
+  const profileImageUrl = useProfilePhoto();
   const { content: aboutData } = useSectionContent(
     'aboutPage',
     DEFAULT_ABOUT_PAGE_CONTENT,
@@ -75,8 +78,18 @@ export default function AboutPageClient({ initialData }: AboutPageClientProps) {
           {story.enabled !== false && (
             <div className="bg-[#FFFFFF] border border-[#E2DBD0] rounded-2xl p-8 sm:p-12 shadow-sm space-y-8">
               <div className="flex flex-col sm:flex-row items-center gap-6 pb-8 border-b border-[#F0EBE1]">
-                <div className="w-24 h-24 rounded-full bg-[#181918] text-[#FAF7F2] font-editorial text-3xl font-bold flex items-center justify-center shrink-0 border-2 border-[#84A98C]">
-                  G
+                <div className="w-24 h-24 rounded-full overflow-hidden shrink-0 border-2 border-[#84A98C] shadow-md bg-slate-100">
+                  <img
+                    src={profileImageUrl}
+                    alt="Geetha N."
+                    className="w-full h-full object-cover object-center"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (target.src !== DEFAULT_PROFILE_IMAGE && !target.src.endsWith(DEFAULT_PROFILE_IMAGE)) {
+                        target.src = DEFAULT_PROFILE_IMAGE;
+                      }
+                    }}
+                  />
                 </div>
                 <div className="text-center sm:text-left">
                   <h2 className="font-editorial text-2xl text-[#181918]">Geetha</h2>

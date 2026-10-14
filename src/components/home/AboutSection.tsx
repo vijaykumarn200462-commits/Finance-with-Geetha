@@ -1,11 +1,43 @@
 import React from 'react';
 import Link from 'next/link';
-import { ArrowRight, ShieldCheck, Clock, Handshake } from 'lucide-react';
+import { ArrowRight, ShieldCheck, Clock, Handshake, CheckCircle2 } from 'lucide-react';
 import { AboutContent } from '@/types/site-content';
 
 interface AboutSectionProps {
   content?: AboutContent;
   id?: string;
+}
+
+function getCardIcon(title: string, index: number) {
+  const normalized = (title || '').toLowerCase();
+  if (
+    normalized.includes('accura') ||
+    normalized.includes('precision') ||
+    normalized.includes('shield')
+  ) {
+    return ShieldCheck;
+  }
+  if (
+    normalized.includes('time') ||
+    normalized.includes('energy') ||
+    normalized.includes('clock') ||
+    normalized.includes('save')
+  ) {
+    return Clock;
+  }
+  if (
+    normalized.includes('person') ||
+    normalized.includes('approach') ||
+    normalized.includes('tailor') ||
+    normalized.includes('partner') ||
+    normalized.includes('handshake')
+  ) {
+    return Handshake;
+  }
+  if (index === 0) return ShieldCheck;
+  if (index === 1) return Clock;
+  if (index === 2) return Handshake;
+  return CheckCircle2;
 }
 
 export function AboutSection({ content, id = 'about' }: AboutSectionProps) {
@@ -15,27 +47,54 @@ export function AboutSection({ content, id = 'about' }: AboutSectionProps) {
 
   const eyebrow = content?.eyebrow || 'ABOUT GEETHA N.';
   const title = content?.title || 'Your Trusted Financial Partner';
-  const paragraphs = content?.paragraphs || [
-    'Running a business is demanding enough without the added stress of messy receipts, untracked expenses, and end-of-year tax scrambles. As an experienced bookkeeping and accounting professional, I provide meticulous record-keeping, accurate reconciliations, and clear financial reporting designed to give you absolute peace of mind.',
-  ];
+  const descriptionText =
+    content?.description ||
+    content?.subtitle ||
+    (content?.paragraphs && content.paragraphs.length > 0 ? content.paragraphs[0] : null) ||
+    'Running a business is demanding enough without the added stress of messy receipts, untracked expenses, and end-of-year tax scrambles. As an experienced bookkeeping and accounting professional, I provide meticulous record-keeping, accurate reconciliations, and clear financial reporting designed to give you absolute peace of mind.';
 
-  const benefits = [
-    {
-      title: 'Absolute Accuracy',
-      desc: 'Every entry, ledger, and reconciliation is handled with precision to eliminate discrepancies and errors.',
-      icon: ShieldCheck,
-    },
-    {
-      title: 'Save Time & Energy',
-      desc: 'Delegate tedious paperwork and financial tracking so you can focus entirely on core business operations.',
-      icon: Clock,
-    },
-    {
-      title: 'Personalized Approach',
-      desc: 'Tailored financial packages and customized reporting that fit your unique business requirements.',
-      icon: Handshake,
-    },
-  ];
+  // Resolve feature cards from CMS content (cards or stats array) with fallback to default 3 cards
+  const rawCards =
+    content?.cards && content.cards.length > 0
+      ? content.cards
+      : content?.stats && content.stats.length > 0
+      ? content.stats.map((s, idx) => ({
+          id: s.id || `card-${idx + 1}`,
+          enabled: s.enabled !== false,
+          title: s.label || s.value || '',
+          description: s.detail || '',
+        }))
+      : null;
+
+  const cards = rawCards && rawCards.length > 0
+    ? rawCards.filter((c) => c.enabled !== false)
+    : [
+        {
+          id: 'card-1',
+          title: 'Absolute Accuracy',
+          description:
+            'Every entry, ledger, and reconciliation is handled with precision to eliminate discrepancies and errors.',
+        },
+        {
+          id: 'card-2',
+          title: 'Save Time & Energy',
+          description:
+            'Delegate tedious paperwork and financial tracking so you can focus entirely on core business operations.',
+        },
+        {
+          id: 'card-3',
+          title: 'Personalized Approach',
+          description:
+            'Tailored financial packages and customized reporting that fit your unique business requirements.',
+        },
+      ];
+
+  const gridColsClass =
+    cards.length === 3
+      ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+      : cards.length === 2
+      ? 'grid-cols-1 md:grid-cols-2'
+      : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4';
 
   return (
     <section
@@ -52,23 +111,24 @@ export function AboutSection({ content, id = 'about' }: AboutSectionProps) {
             {title}
           </h2>
           <div className="w-20 h-1 bg-[#138354] mx-auto rounded-full my-3.5" />
-          <div className="space-y-4 text-slate-600 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto font-normal mt-4">
-            {paragraphs.map((p, idx) => (
-              <p key={idx}>{p}</p>
-            ))}
-          </div>
+          <p className="text-slate-600 text-base sm:text-lg leading-relaxed max-w-2xl mx-auto font-normal mt-4">
+            {descriptionText}
+          </p>
         </div>
 
-        {/* 3 Benefit Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8 max-w-6xl mx-auto items-stretch">
-          {benefits.map((item, idx) => {
-            const Icon = item.icon;
-            const isThirdCard = idx === 2;
+        {/* Responsive Grid with Even Widths, Equal Heights & Consistent Gaps */}
+        <div className={`grid ${gridColsClass} gap-6 sm:gap-8 max-w-6xl mx-auto items-stretch`}>
+          {cards.map((item, idx) => {
+            const Icon = getCardIcon(item.title, idx);
+            const isThirdCardInThree = cards.length === 3 && idx === 2;
+
             return (
               <div
-                key={idx}
+                key={item.id || idx}
                 className={`bg-white border border-[#E2DBD0] rounded-2xl p-6 sm:p-8 text-center flex flex-col justify-between shadow-xs hover:shadow-md hover:border-[#138354]/40 transition-all duration-300 group hover:-translate-y-0.5 h-full ${
-                  isThirdCard ? 'md:col-span-2 lg:col-span-1 md:max-w-md md:mx-auto md:w-full' : ''
+                  isThirdCardInThree
+                    ? 'md:col-span-2 lg:col-span-1 md:max-w-md md:mx-auto md:w-full lg:max-w-none'
+                    : ''
                 }`}
               >
                 <div className="flex-1 flex flex-col justify-between">
@@ -89,7 +149,7 @@ export function AboutSection({ content, id = 'about' }: AboutSectionProps) {
 
                   {/* Card Description */}
                   <p className="text-sm text-[#5C5E5B] leading-relaxed pt-1">
-                    {item.desc}
+                    {item.description}
                   </p>
                 </div>
               </div>
@@ -103,7 +163,7 @@ export function AboutSection({ content, id = 'about' }: AboutSectionProps) {
             href="/about"
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#0f2c59] hover:text-[#138354] underline underline-offset-4 transition-colors"
           >
-            <span>Read more about my background, philosophy, and approach</span>
+            <span>Read more about my background, philosophy, and firm history</span>
             <ArrowRight className="w-4 h-4" />
           </Link>
         </div>

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Save,
   Check,
@@ -12,21 +12,27 @@ import {
   Layers,
   Sparkles,
   Users,
-  Info,
-  TrendingUp,
   BookOpen,
   ShoppingBag,
-  PhoneCall,
   Eye,
   EyeOff,
   Calendar,
   Compass,
   Mail,
+  Upload,
+  Camera,
+  LayoutDashboard,
+  CheckCircle2,
+  Clock,
+  Phone,
+  Shield,
+  RotateCcw,
+  Globe,
 } from 'lucide-react';
-import Link from 'next/link';
 import { auth } from '@/lib/firebase/client';
 import { getSiteContentDoc } from '@/lib/firebase/firestore';
 import {
+  BrandingContent,
   HeroContent,
   StatsContent,
   TeachingContent,
@@ -44,7 +50,9 @@ import {
   WhyUsContent,
 } from '@/types/site-content';
 import {
+  DEFAULT_BRANDING_CONTENT,
   DEFAULT_HERO_CONTENT,
+  DEFAULT_PROFILE_IMAGE,
   DEFAULT_STATS_CONTENT,
   DEFAULT_TEACHING_CONTENT,
   DEFAULT_COMMUNITY_CONTENT,
@@ -61,186 +69,126 @@ import {
   DEFAULT_WHY_US_CONTENT,
 } from '@/lib/firebase/content';
 
-type TabKey =
+export type MainCategory =
+  | 'branding'
   | 'hero'
-  | 'stats'
-  | 'teaching'
-  | 'community'
-  | 'callStructure'
-  | 'book'
-  | 'store'
-  | 'oneOnOne'
-  | 'about'
-  | 'finalCta'
-  | 'whyUs'
-  | 'communityPage'
-  | 'aboutPage'
-  | 'contactPage'
-  | 'storePage';
+  | 'services'
+  | 'aboutWhyUs'
+  | 'contact'
+  | 'otherPages';
 
-interface TabDefinition {
-  key: TabKey;
+interface CategoryItem {
+  id: MainCategory;
   label: string;
-  category: 'homepage' | 'pages';
-  icon: React.ReactNode;
-  previewUrl: string;
+  badgeLabel: string;
   description: string;
+  icon: React.ElementType;
+  previewUrl: string;
 }
 
-const TABS: TabDefinition[] = [
-  // Homepage Sections
+const CATEGORIES: CategoryItem[] = [
   {
-    key: 'hero',
-    label: 'Hero Banner',
-    category: 'homepage',
-    icon: <Sparkles className="w-4 h-4" />,
-    previewUrl: '/#top',
-    description: 'Main introduction, headline, credibility quote, and primary action buttons.',
+    id: 'branding',
+    label: 'Branding & Header',
+    badgeLabel: 'Identity',
+    description: 'Manage website logo, business name, tagline, and navigation bar display settings.',
+    icon: Sparkles,
+    previewUrl: '/',
   },
   {
-    key: 'stats',
-    label: 'Statistics',
-    category: 'homepage',
-    icon: <TrendingUp className="w-4 h-4" />,
-    previewUrl: '/#stats',
-    description: 'Four track-record metrics from Geetha’s working bookkeeping firm.',
+    id: 'hero',
+    label: 'Homepage Hero',
+    badgeLabel: 'Hero Banner',
+    description: 'Main introduction headline, description, consultation buttons, and Geetha N. profile card.',
+    icon: LayoutDashboard,
+    previewUrl: '/#hero',
   },
   {
-    key: 'teaching',
+    id: 'services',
     label: 'Services & Offerings',
-    category: 'homepage',
-    icon: <Compass className="w-4 h-4" />,
+    badgeLabel: 'Services',
+    description: 'Professional bookkeeping, daily ledger maintenance, and reporting service packages.',
+    icon: Compass,
     previewUrl: '/#services',
-    description: 'Professional bookkeeping & accounting service cards (Bookkeeping, Reporting, AP/AR, Tax Prep).',
   },
   {
-    key: 'community',
-    label: 'Community Section (Homepage)',
-    category: 'homepage',
-    icon: <Users className="w-4 h-4" />,
-    previewUrl: '/#community',
-    description: 'Live mentorship overview, included benefits, and monthly membership pricing on the homepage.',
-  },
-  {
-    key: 'callStructure',
-    label: 'Call Agenda (Homepage)',
-    category: 'homepage',
-    icon: <Calendar className="w-4 h-4" />,
-    previewUrl: '/#community',
-    description: 'Structured 3-part agenda for twice-weekly live group mentorship calls.',
-  },
-  {
-    key: 'book',
-    label: 'The Book & Chapters',
-    category: 'homepage',
-    icon: <BookOpen className="w-4 h-4" />,
-    previewUrl: '/book',
-    description: 'Book details, formats, compatibility, download URLs, chapters, and FAQ.',
-  },
-  {
-    key: 'store',
-    label: 'Store Promo Banner',
-    category: 'homepage',
-    icon: <ShoppingBag className="w-4 h-4" />,
-    previewUrl: '/#store',
-    description: 'Templates & cheat sheets promotional section on the homepage.',
-  },
-  {
-    key: 'oneOnOne',
-    label: '1-on-1 Strategy Call',
-    category: 'homepage',
-    icon: <PhoneCall className="w-4 h-4" />,
-    previewUrl: '/#call',
-    description: 'Private 30-minute consultation details, deliverables, and booking CTA.',
-  },
-  {
-    key: 'about',
-    label: 'About Section (Homepage)',
-    category: 'homepage',
-    icon: <Layers className="w-4 h-4" />,
+    id: 'aboutWhyUs',
+    label: 'About & Why Choose Us',
+    badgeLabel: 'About / Trust',
+    description: 'About Geetha N., the 3 core feature cards, and Why Partner With Us benefits.',
+    icon: Layers,
     previewUrl: '/#about',
-    description: 'Founder biography, background story, and 3 core life/business priorities on the homepage.',
   },
   {
-    key: 'whyUs',
-    label: 'Why Us Section',
-    category: 'homepage',
-    icon: <Check className="w-4 h-4" />,
-    previewUrl: '/#why-us',
-    description: 'Why Partner With Us benefits, core advantages, and consultation phone box on the homepage.',
+    id: 'contact',
+    label: 'Contact & Inquiry',
+    badgeLabel: 'Inquiries',
+    description: 'Direct phone, email, working hours, address, and client quick inquiry form switch.',
+    icon: Mail,
+    previewUrl: '/#contact',
   },
   {
-    key: 'finalCta',
-    label: 'Final CTA',
-    category: 'homepage',
-    icon: <Sparkles className="w-4 h-4" />,
-    previewUrl: '/#top',
-    description: 'Closing call to action banner before the footer on the homepage.',
-  },
-
-  // Dedicated Pages
-  {
-    key: 'communityPage',
-    label: 'Community Page (Full /community)',
-    category: 'pages',
-    icon: <Users className="w-4 h-4" />,
-    previewUrl: '/community',
-    description: 'Full /community page layout, benefits list, call schedule, and FAQs.',
-  },
-  {
-    key: 'aboutPage',
-    label: 'About Page (Full /about)',
-    category: 'pages',
-    icon: <Layers className="w-4 h-4" />,
+    id: 'otherPages',
+    label: 'Other Active Pages',
+    badgeLabel: 'Dedicated Pages',
+    description: 'Dedicated subpages including Full About Page, Dedicated Store, Book, and Community.',
+    icon: BookOpen,
     previewUrl: '/about',
-    description: 'Full /about narrative, firm history, and core values.',
-  },
-  {
-    key: 'contactPage',
-    label: 'Contact Page & Form',
-    category: 'pages',
-    icon: <Mail className="w-4 h-4" />,
-    previewUrl: '/contact',
-    description: 'Contact copy, support email, and authenticated contact form availability switch.',
-  },
-  {
-    key: 'storePage',
-    label: 'Store Page',
-    category: 'pages',
-    icon: <ShoppingBag className="w-4 h-4" />,
-    previewUrl: '/store',
-    description: 'Full /store title, subtitle, and member perk recommendation banner.',
   },
 ];
 
 export default function AdminSiteContentClient() {
-  const [activeTab, setActiveTab] = useState<TabKey>('hero');
-  const [categoryFilter, setCategoryFilter] = useState<'all' | 'homepage' | 'pages'>('all');
+  const [activeCategory, setActiveCategory] = useState<MainCategory>('branding');
+  const [subTabAboutWhyUs, setSubTabAboutWhyUs] = useState<'about' | 'whyUs'>('about');
+  const [subTabOtherPages, setSubTabOtherPages] = useState<
+    'aboutPage' | 'storePage' | 'book' | 'communityPage'
+  >('aboutPage');
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Content state for all managed sections
+  const [branding, setBranding] = useState<BrandingContent>(DEFAULT_BRANDING_CONTENT);
   const [hero, setHero] = useState<HeroContent>(DEFAULT_HERO_CONTENT);
-  const [stats, setStats] = useState<StatsContent>(DEFAULT_STATS_CONTENT);
   const [teaching, setTeaching] = useState<TeachingContent>(DEFAULT_TEACHING_CONTENT);
+  const [about, setAbout] = useState<AboutContent>(DEFAULT_ABOUT_CONTENT);
+  const [whyUs, setWhyUs] = useState<WhyUsContent>(DEFAULT_WHY_US_CONTENT);
+  const [contactPage, setContactPage] = useState<ContactPageContent>(DEFAULT_CONTACT_PAGE_CONTENT);
+
+  // Other pages content state
+  const [aboutPage, setAboutPage] = useState<AboutPageContent>(DEFAULT_ABOUT_PAGE_CONTENT);
+  const [storePage, setStorePage] = useState<StorePageContent>(DEFAULT_STORE_PAGE_CONTENT);
+  const [book, setBook] = useState<BookContent>(DEFAULT_BOOK_PAGE_CONTENT);
+  const [communityPage, setCommunityPage] = useState<CommunityPageContent>(DEFAULT_COMMUNITY_PAGE_CONTENT);
+
+  // Retained state (prevent loss of existing document data)
+  const [stats, setStats] = useState<StatsContent>(DEFAULT_STATS_CONTENT);
   const [community, setCommunity] = useState<CommunityContent>(DEFAULT_COMMUNITY_CONTENT);
   const [callStructure, setCallStructure] = useState<CallStructureContent>(DEFAULT_CALL_STRUCTURE_CONTENT);
-  const [book, setBook] = useState<BookContent>(DEFAULT_BOOK_PAGE_CONTENT);
   const [store, setStore] = useState<StoreSectionContent>(DEFAULT_STORE_SECTION_CONTENT);
   const [oneOnOne, setOneOnOne] = useState<OneOnOneContent>(DEFAULT_ONE_ON_ONE_CONTENT);
-  const [about, setAbout] = useState<AboutContent>(DEFAULT_ABOUT_CONTENT);
   const [finalCta, setFinalCta] = useState<FinalCTAContent>(DEFAULT_FINAL_CTA_CONTENT);
-  const [whyUs, setWhyUs] = useState<WhyUsContent>(DEFAULT_WHY_US_CONTENT);
-  const [communityPage, setCommunityPage] = useState<CommunityPageContent>(DEFAULT_COMMUNITY_PAGE_CONTENT);
-  const [aboutPage, setAboutPage] = useState<AboutPageContent>(DEFAULT_ABOUT_PAGE_CONTENT);
-  const [contactPage, setContactPage] = useState<ContactPageContent>(DEFAULT_CONTACT_PAGE_CONTENT);
-  const [storePage, setStorePage] = useState<StorePageContent>(DEFAULT_STORE_PAGE_CONTENT);
 
+  // Snapshot of loaded data for unsaved changes detection
+  const [initialSnapshot, setInitialSnapshot] = useState<string>('');
+
+  // Logo upload state
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [logoUploadProgress, setLogoUploadProgress] = useState(0);
+
+  // Profile photo upload state
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [photoUploadProgress, setPhotoUploadProgress] = useState(0);
+
+  // Load all site content from Firestore
   const loadAllContent = useCallback(async () => {
+    setLoading(true);
+    setErrorMessage(null);
     try {
       const [
+        brandingDoc,
         heroDoc,
         statsDoc,
         teachDoc,
@@ -257,6 +205,7 @@ export default function AdminSiteContentClient() {
         contactPageDoc,
         storePageDoc,
       ] = await Promise.all([
+        getSiteContentDoc<BrandingContent>('branding'),
         getSiteContentDoc<HeroContent>('hero'),
         getSiteContentDoc<StatsContent>('stats'),
         getSiteContentDoc<TeachingContent>('teaching'),
@@ -274,33 +223,245 @@ export default function AdminSiteContentClient() {
         getSiteContentDoc<StorePageContent>('storePage'),
       ]);
 
-      if (heroDoc) setHero((prev) => ({ ...prev, ...heroDoc }));
+      const loadedBranding = brandingDoc ? { ...DEFAULT_BRANDING_CONTENT, ...brandingDoc } : DEFAULT_BRANDING_CONTENT;
+      const loadedHero = heroDoc ? { ...DEFAULT_HERO_CONTENT, ...heroDoc } : DEFAULT_HERO_CONTENT;
+      const loadedTeach = teachDoc ? { ...DEFAULT_TEACHING_CONTENT, ...teachDoc } : DEFAULT_TEACHING_CONTENT;
+      const loadedAbout = aboutDoc ? { ...DEFAULT_ABOUT_CONTENT, ...aboutDoc } : DEFAULT_ABOUT_CONTENT;
+      const loadedWhyUs = whyUsDoc ? { ...DEFAULT_WHY_US_CONTENT, ...whyUsDoc } : DEFAULT_WHY_US_CONTENT;
+      const loadedContact = contactPageDoc ? { ...DEFAULT_CONTACT_PAGE_CONTENT, ...contactPageDoc } : DEFAULT_CONTACT_PAGE_CONTENT;
+      const loadedAboutPage = aboutPageDoc ? { ...DEFAULT_ABOUT_PAGE_CONTENT, ...aboutPageDoc } : DEFAULT_ABOUT_PAGE_CONTENT;
+      const loadedStorePage = storePageDoc ? { ...DEFAULT_STORE_PAGE_CONTENT, ...storePageDoc } : DEFAULT_STORE_PAGE_CONTENT;
+      const loadedBook = bookDoc ? { ...DEFAULT_BOOK_PAGE_CONTENT, ...bookDoc } : DEFAULT_BOOK_PAGE_CONTENT;
+      const loadedCommPage = commPageDoc ? { ...DEFAULT_COMMUNITY_PAGE_CONTENT, ...commPageDoc } : DEFAULT_COMMUNITY_PAGE_CONTENT;
+
+      setBranding(loadedBranding);
+      setHero(loadedHero);
+      setTeaching(loadedTeach);
+      setAbout(loadedAbout);
+      setWhyUs(loadedWhyUs);
+      setContactPage(loadedContact);
+      setAboutPage(loadedAboutPage);
+      setStorePage(loadedStorePage);
+      setBook(loadedBook);
+      setCommunityPage(loadedCommPage);
+
       if (statsDoc) setStats((prev) => ({ ...prev, ...statsDoc }));
-      if (teachDoc) setTeaching((prev) => ({ ...prev, ...teachDoc }));
       if (commDoc) setCommunity((prev) => ({ ...prev, ...commDoc }));
       if (callDoc) setCallStructure((prev) => ({ ...prev, ...callDoc }));
-      if (bookDoc) setBook((prev) => ({ ...prev, ...bookDoc }));
       if (storeDoc) setStore((prev) => ({ ...prev, ...storeDoc }));
       if (call1on1Doc) setOneOnOne((prev) => ({ ...prev, ...call1on1Doc }));
-      if (aboutDoc) setAbout((prev) => ({ ...prev, ...aboutDoc }));
       if (ctaDoc) setFinalCta((prev) => ({ ...prev, ...ctaDoc }));
-      if (whyUsDoc) setWhyUs((prev) => ({ ...prev, ...whyUsDoc }));
-      if (commPageDoc) setCommunityPage((prev) => ({ ...prev, ...commPageDoc }));
-      if (aboutPageDoc) setAboutPage((prev) => ({ ...prev, ...aboutPageDoc }));
-      if (contactPageDoc) setContactPage((prev) => ({ ...prev, ...contactPageDoc }));
-      if (storePageDoc) setStorePage((prev) => ({ ...prev, ...storePageDoc }));
+
+      setInitialSnapshot(
+        JSON.stringify({
+          branding: loadedBranding,
+          hero: loadedHero,
+          teaching: loadedTeach,
+          about: loadedAbout,
+          whyUs: loadedWhyUs,
+          contactPage: loadedContact,
+          aboutPage: loadedAboutPage,
+          storePage: loadedStorePage,
+          book: loadedBook,
+          communityPage: loadedCommPage,
+        })
+      );
     } catch (err: unknown) {
       console.warn('Error loading site content from Firestore:', err);
+      setErrorMessage('Could not load site content from Firestore. Please verify your connection.');
     } finally {
       setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadAllContent();
   }, [loadAllContent]);
 
+  // Determine current active section key to save
+  const currentSectionKey = useMemo(() => {
+    switch (activeCategory) {
+      case 'branding':
+        return 'branding';
+      case 'hero':
+        return 'hero';
+      case 'services':
+        return 'teaching';
+      case 'aboutWhyUs':
+        return subTabAboutWhyUs;
+      case 'contact':
+        return 'contactPage';
+      case 'otherPages':
+        return subTabOtherPages;
+      default:
+        return 'branding';
+    }
+  }, [activeCategory, subTabAboutWhyUs, subTabOtherPages]);
+
+  // Unsaved changes check for current category
+  const hasUnsavedChanges = useMemo(() => {
+    if (!initialSnapshot) return false;
+    try {
+      const parsed = JSON.parse(initialSnapshot);
+      switch (activeCategory) {
+        case 'branding':
+          return JSON.stringify(parsed.branding) !== JSON.stringify(branding);
+        case 'hero':
+          return JSON.stringify(parsed.hero) !== JSON.stringify(hero);
+        case 'services':
+          return JSON.stringify(parsed.teaching) !== JSON.stringify(teaching);
+        case 'aboutWhyUs':
+          if (subTabAboutWhyUs === 'about') {
+            return JSON.stringify(parsed.about) !== JSON.stringify(about);
+          }
+          return JSON.stringify(parsed.whyUs) !== JSON.stringify(whyUs);
+        case 'contact':
+          return JSON.stringify(parsed.contactPage) !== JSON.stringify(contactPage);
+        case 'otherPages':
+          if (subTabOtherPages === 'aboutPage') return JSON.stringify(parsed.aboutPage) !== JSON.stringify(aboutPage);
+          if (subTabOtherPages === 'storePage') return JSON.stringify(parsed.storePage) !== JSON.stringify(storePage);
+          if (subTabOtherPages === 'book') return JSON.stringify(parsed.book) !== JSON.stringify(book);
+          if (subTabOtherPages === 'communityPage') return JSON.stringify(parsed.communityPage) !== JSON.stringify(communityPage);
+          return false;
+      }
+    } catch {
+      return false;
+    }
+    return false;
+  }, [
+    initialSnapshot,
+    activeCategory,
+    subTabAboutWhyUs,
+    subTabOtherPages,
+    branding,
+    hero,
+    teaching,
+    about,
+    whyUs,
+    contactPage,
+    aboutPage,
+    storePage,
+    book,
+    communityPage,
+  ]);
+
+  // Discard current changes and restore snapshot
+  const handleDiscardChanges = () => {
+    if (!initialSnapshot) return;
+    try {
+      const parsed = JSON.parse(initialSnapshot);
+      if (activeCategory === 'branding') setBranding(parsed.branding);
+      if (activeCategory === 'hero') setHero(parsed.hero);
+      if (activeCategory === 'services') setTeaching(parsed.teaching);
+      if (activeCategory === 'aboutWhyUs') {
+        if (subTabAboutWhyUs === 'about') setAbout(parsed.about);
+        else setWhyUs(parsed.whyUs);
+      }
+      if (activeCategory === 'contact') setContactPage(parsed.contactPage);
+      if (activeCategory === 'otherPages') {
+        if (subTabOtherPages === 'aboutPage') setAboutPage(parsed.aboutPage);
+        if (subTabOtherPages === 'storePage') setStorePage(parsed.storePage);
+        if (subTabOtherPages === 'book') setBook(parsed.book);
+        if (subTabOtherPages === 'communityPage') setCommunityPage(parsed.communityPage);
+      }
+      setSuccessMessage('Unsaved changes discarded.');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch {
+      // Graceful
+    }
+  };
+
+  // Upload image helper via secure API endpoint
+  const uploadImageFile = async (
+    file: File,
+    target: 'branding' | 'hero',
+    onProgress: (p: number) => void
+  ): Promise<string> => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+    if (!allowedTypes.includes(file.type.toLowerCase())) {
+      throw new Error(`Unsupported file type "${file.type}". Please upload JPEG, PNG, or WebP.`);
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      throw new Error(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Limit is 5MB.`);
+    }
+
+    const token = await auth.currentUser?.getIdToken();
+    if (!token) {
+      throw new Error('Authentication required. Please log in as an administrator.');
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('target', target);
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/admin/profile-photo');
+      xhr.setRequestHeader('Authorization', `Bearer ${token}`);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable && event.total > 0) {
+          const percent = Math.round((event.loaded / event.total) * 95);
+          onProgress(percent);
+        }
+      };
+
+      xhr.onload = () => {
+        try {
+          const data = JSON.parse(xhr.responseText || '{}');
+          if (xhr.status >= 200 && xhr.status < 300 && data.url) {
+            onProgress(100);
+            resolve(data.url);
+          } else {
+            reject(new Error(data.error || `Upload failed with status ${xhr.status}`));
+          }
+        } catch {
+          reject(new Error(`Failed to parse upload server response (${xhr.status})`));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Network connection error during image upload.'));
+      xhr.send(formData);
+    });
+  };
+
+  // Logo upload handler
+  const handleLogoUpload = async (file: File) => {
+    setUploadingLogo(true);
+    setLogoUploadProgress(0);
+    setErrorMessage(null);
+    try {
+      const url = await uploadImageFile(file, 'branding', setLogoUploadProgress);
+      setBranding((prev) => ({ ...prev, logoUrl: url }));
+      setSuccessMessage('Logo uploaded and applied to branding configuration.');
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Logo upload failed';
+      setErrorMessage(msg);
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  // Hero profile photo upload handler
+  const handlePhotoUpload = async (file: File) => {
+    setUploadingPhoto(true);
+    setPhotoUploadProgress(0);
+    setErrorMessage(null);
+    try {
+      const url = await uploadImageFile(file, 'hero', setPhotoUploadProgress);
+      setHero((prev) => ({ ...prev, profileImageUrl: url }));
+      setSuccessMessage('Profile photograph uploaded and updated on hero card.');
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Profile photo upload failed';
+      setErrorMessage(msg);
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
+  // Save current active section
   const handleSaveCurrentSection = async () => {
     setSaving(true);
     setErrorMessage(null);
@@ -308,93 +469,86 @@ export default function AdminSiteContentClient() {
 
     try {
       let dataToSave: unknown;
-      let sectionName = '';
+      let sectionTitle = '';
 
-      switch (activeTab) {
+      switch (currentSectionKey) {
+        case 'branding':
+          dataToSave = branding;
+          sectionTitle = 'Branding & Header';
+          break;
         case 'hero':
           dataToSave = hero;
-          sectionName = 'Hero Banner';
-          break;
-        case 'stats':
-          dataToSave = stats;
-          sectionName = 'Statistics';
+          sectionTitle = 'Homepage Hero';
           break;
         case 'teaching':
           dataToSave = teaching;
-          sectionName = 'Services & Offerings';
-          break;
-        case 'community':
-          dataToSave = community;
-          sectionName = 'The Community';
-          break;
-        case 'callStructure':
-          dataToSave = callStructure;
-          sectionName = 'Call Agenda';
-          break;
-        case 'book':
-          dataToSave = book;
-          sectionName = 'The Book & Chapters';
-          break;
-        case 'store':
-          dataToSave = store;
-          sectionName = 'Store Section';
-          break;
-        case 'oneOnOne':
-          dataToSave = oneOnOne;
-          sectionName = '1-on-1 Strategy Call';
+          sectionTitle = 'Services & Offerings';
           break;
         case 'about':
           dataToSave = about;
-          sectionName = 'About Geetha';
+          sectionTitle = 'About Section';
           break;
         case 'whyUs':
           dataToSave = whyUs;
-          sectionName = 'Why Us Section';
-          break;
-        case 'finalCta':
-          dataToSave = finalCta;
-          sectionName = 'Final CTA';
-          break;
-        case 'communityPage':
-          dataToSave = communityPage;
-          sectionName = 'Community Page';
-          break;
-        case 'aboutPage':
-          dataToSave = aboutPage;
-          sectionName = 'About Page';
+          sectionTitle = 'Why Choose Us';
           break;
         case 'contactPage':
           dataToSave = contactPage;
-          sectionName = 'Contact Page';
+          sectionTitle = 'Contact & Inquiry';
+          break;
+        case 'aboutPage':
+          dataToSave = aboutPage;
+          sectionTitle = 'Dedicated About Page';
           break;
         case 'storePage':
           dataToSave = storePage;
-          sectionName = 'Store Page';
+          sectionTitle = 'Dedicated Store Page';
+          break;
+        case 'book':
+          dataToSave = book;
+          sectionTitle = 'The Book & Chapters';
+          break;
+        case 'communityPage':
+          dataToSave = communityPage;
+          sectionTitle = 'Community Page';
           break;
       }
 
-      if (dataToSave) {
-        const token = await auth.currentUser?.getIdToken();
-        if (!token) {
-          throw new Error('Authentication required. Please sign in as an administrator.');
-        }
-
-        const res = await fetch('/api/admin/site-content', {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({ section: activeTab, data: dataToSave }),
-        });
-
-        if (!res.ok) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || `Save failed with status ${res.status}`);
-        }
+      if (!dataToSave) {
+        throw new Error('No section data to save.');
       }
 
-      setSuccessMessage(`Saved "${sectionName}" to Firestore. Changes are live on the website.`);
+      const token = await auth.currentUser?.getIdToken();
+      if (!token) {
+        throw new Error('Authentication required. Please sign in as an administrator.');
+      }
+
+      const res = await fetch('/api/admin/site-content', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ section: currentSectionKey, data: dataToSave }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Save failed with status ${res.status}`);
+      }
+
+      // Update initial snapshot so unsaved changes indicator clears
+      setInitialSnapshot((prev) => {
+        try {
+          const parsed = JSON.parse(prev || '{}');
+          parsed[currentSectionKey] = dataToSave;
+          return JSON.stringify(parsed);
+        } catch {
+          return prev;
+        }
+      });
+
+      setSuccessMessage(`Saved "${sectionTitle}" successfully. Website content and caches have been refreshed.`);
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to save section content';
@@ -404,2125 +558,1679 @@ export default function AdminSiteContentClient() {
     }
   };
 
-  const [repairing, setRepairing] = useState(false);
-
-  const handleRepairMissingDocs = async () => {
-    setRepairing(true);
-    setErrorMessage(null);
-    setSuccessMessage(null);
-    try {
-      const token = await auth.currentUser?.getIdToken();
-      if (!token) {
-        throw new Error('Authentication required. Please sign in as an administrator.');
-      }
-
-      const res = await fetch('/api/admin/site-content', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ action: 'repair-missing' }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to repair CMS documents');
-      }
-      setSuccessMessage(data.message || 'CMS documents checked and verified.');
-      await loadAllContent();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Error repairing CMS documents';
-      setErrorMessage(msg);
-    } finally {
-      setRepairing(false);
-    }
-  };
-
-  const getSectionEnabledState = (tabKey: TabKey): boolean => {
-    switch (tabKey) {
+  // Status helper for categories
+  const getCategoryStatus = (catId: MainCategory) => {
+    switch (catId) {
+      case 'branding':
+        return { label: 'Active', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
       case 'hero':
-        return hero.enabled !== false;
-      case 'stats':
-        return stats.enabled !== false;
-      case 'teaching':
-        return teaching.enabled !== false;
-      case 'community':
-        return community.enabled !== false;
-      case 'callStructure':
-        return callStructure.enabled !== false;
-      case 'book':
-        return book.enabled !== false;
-      case 'store':
-        return store.enabled !== false;
-      case 'oneOnOne':
-        return oneOnOne.enabled !== false;
-      case 'about':
-        return about.enabled !== false;
-      case 'finalCta':
-        return finalCta.enabled !== false;
-      case 'whyUs':
-        return whyUs.enabled !== false;
-      case 'communityPage':
-        return communityPage.enabled !== false;
-      case 'aboutPage':
-        return aboutPage.enabled !== false;
-      case 'contactPage':
-        return contactPage.enabled !== false;
-      case 'storePage':
-        return storePage.enabled !== false;
+        return hero.enabled !== false
+          ? { label: 'Active', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+          : { label: 'Hidden', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+      case 'services':
+        return teaching.enabled !== false
+          ? { label: 'Active', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+          : { label: 'Hidden', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+      case 'aboutWhyUs':
+        return about.enabled !== false && whyUs.enabled !== false
+          ? { label: 'Active', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+          : { label: 'Partially Hidden', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+      case 'contact':
+        return contactPage.enabled !== false
+          ? {
+              label: contactPage.formEnabled ? 'Active (Form Open)' : 'Active (Form Paused)',
+              color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+            }
+          : { label: 'Hidden', color: 'bg-amber-50 text-amber-700 border-amber-200' };
+      case 'otherPages':
+        return { label: 'Dedicated Pages', color: 'bg-slate-100 text-slate-700 border-slate-200' };
     }
   };
 
-  const toggleSectionEnabled = (tabKey: TabKey) => {
-    const currentState = getSectionEnabledState(tabKey);
-    const newState = !currentState;
-
-    switch (tabKey) {
-      case 'hero':
-        setHero({ ...hero, enabled: newState });
-        break;
-      case 'stats':
-        setStats({ ...stats, enabled: newState });
-        break;
-      case 'teaching':
-        setTeaching({ ...teaching, enabled: newState });
-        break;
-      case 'community':
-        setCommunity({ ...community, enabled: newState });
-        break;
-      case 'callStructure':
-        setCallStructure({ ...callStructure, enabled: newState });
-        break;
-      case 'book':
-        setBook({ ...book, enabled: newState });
-        break;
-      case 'store':
-        setStore({ ...store, enabled: newState });
-        break;
-      case 'oneOnOne':
-        setOneOnOne({ ...oneOnOne, enabled: newState });
-        break;
-      case 'about':
-        setAbout({ ...about, enabled: newState });
-        break;
-      case 'whyUs':
-        setWhyUs({ ...whyUs, enabled: newState });
-        break;
-      case 'finalCta':
-        setFinalCta({ ...finalCta, enabled: newState });
-        break;
-      case 'communityPage':
-        setCommunityPage({
-          ...communityPage,
-          enabled: newState,
-          hero: { ...communityPage.hero, enabled: newState },
-        });
-        break;
-      case 'aboutPage':
-        setAboutPage({
-          ...aboutPage,
-          enabled: newState,
-          hero: { ...aboutPage.hero, enabled: newState },
-        });
-        break;
-      case 'contactPage':
-        setContactPage({ ...contactPage, enabled: newState });
-        break;
-      case 'storePage':
-        setStorePage({ ...storePage, enabled: newState });
-        break;
+  // Preview URL for current section
+  const currentPreviewUrl = useMemo(() => {
+    if (activeCategory === 'branding') return '/';
+    if (activeCategory === 'hero') return '/#hero';
+    if (activeCategory === 'services') return '/#services';
+    if (activeCategory === 'aboutWhyUs') return subTabAboutWhyUs === 'about' ? '/#about' : '/#why-us';
+    if (activeCategory === 'contact') return '/#contact';
+    if (activeCategory === 'otherPages') {
+      if (subTabOtherPages === 'aboutPage') return '/about';
+      if (subTabOtherPages === 'storePage') return '/store';
+      if (subTabOtherPages === 'book') return '/book';
+      if (subTabOtherPages === 'communityPage') return '/community';
     }
-  };
+    return '/';
+  }, [activeCategory, subTabAboutWhyUs, subTabOtherPages]);
 
-  const currentTabDef = TABS.find((t) => t.key === activeTab)!;
-  const isCurrentEnabled = getSectionEnabledState(activeTab);
-
-  const filteredTabs = TABS.filter((t) => {
-    if (categoryFilter === 'all') return true;
-    return t.category === categoryFilter;
-  });
+  const activeCategoryDef = CATEGORIES.find((c) => c.id === activeCategory) || CATEGORIES[0];
 
   return (
-    <div className="space-y-6 pb-20">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-6 max-w-7xl mx-auto pb-16">
+      {/* 1. TOP HEADER & ACTION BAR */}
+      <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="font-editorial text-3xl font-semibold text-[#181918]">
-            Site Content & Section CMS
-          </h1>
-          <p className="text-sm text-[#5C5E5B] mt-1">
-            Control live copy, visibility toggles, and item-level configurations directly in Firestore.
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold font-serif text-[#0f2c59]">
+              Site Content & Branding CMS
+            </h1>
+            <span className="bg-emerald-50 text-[#138354] border border-emerald-200 text-[11px] font-mono px-2 py-0.5 rounded-full font-semibold uppercase">
+              Live Connected
+            </span>
+          </div>
+          <p className="text-sm text-slate-600 mt-1">
+            Easily update website identity, homepage sections, services, and contact details without editing source code.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button
-            onClick={handleRepairMissingDocs}
-            disabled={repairing || loading}
-            title="Scan Cloud Firestore site_content and initialize any missing section documents without overwriting existing data"
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#181918] bg-[#F0ECE1] border border-[#E2DBD0] rounded-lg hover:bg-[#E5DFD3] transition-colors"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${repairing ? 'animate-spin text-[#244634]' : ''}`} />
-            {repairing ? 'Auditing Docs...' : 'Audit CMS Docs'}
-          </button>
+        {/* Global Actions */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {hasUnsavedChanges && (
+            <button
+              type="button"
+              onClick={handleDiscardChanges}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Discard</span>
+            </button>
+          )}
 
-          <Link
-            href={currentTabDef.previewUrl}
+          <a
+            href={currentPreviewUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#244634] bg-[#EAF0EC] rounded-lg hover:bg-[#D8E6DB] transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-[#0f2c59] bg-[#0f2c59]/5 hover:bg-[#0f2c59]/10 border border-[#0f2c59]/15 transition-colors"
           >
-            <ExternalLink className="w-3.5 h-3.5" />
-            Preview Live
-          </Link>
+            <ExternalLink className="w-3.5 h-3.5 text-[#138354]" />
+            <span>Preview Live</span>
+          </a>
 
           <button
-            onClick={handleSaveCurrentSection}
+            type="button"
             disabled={saving || loading}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#244634] rounded-lg hover:bg-[#1E3B2C] disabled:opacity-50 transition-colors shadow-xs"
+            onClick={handleSaveCurrentSection}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-[#0f2c59] hover:bg-[#138354] disabled:opacity-60 shadow-xs transition-colors cursor-pointer"
           >
             {saving ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin" />
+                <span>Saving Changes...</span>
+              </>
             ) : (
-              <Save className="w-4 h-4" />
+              <>
+                <Save className="w-4 h-4 text-emerald-300" />
+                <span>Save Changes</span>
+              </>
             )}
-            {saving ? 'Saving...' : 'Save Changes'}
           </button>
         </div>
       </div>
 
-      {/* Notifications */}
+      {/* 2. NOTIFICATIONS & STATUS BANNERS */}
       {successMessage && (
-        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-between text-sm shadow-xs animate-in fade-in duration-200">
-          <div className="flex items-center gap-2">
-            <Check className="w-5 h-5 text-emerald-600 shrink-0" />
-            <span>{successMessage}</span>
-          </div>
+        <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm flex items-start gap-3 shadow-xs">
+          <CheckCircle2 className="w-5 h-5 text-[#138354] flex-shrink-0 mt-0.5" />
+          <div className="flex-1 font-medium">{successMessage}</div>
           <button
+            type="button"
             onClick={() => setSuccessMessage(null)}
-            className="text-xs font-semibold text-emerald-700 hover:text-emerald-900"
+            className="text-emerald-700 hover:text-emerald-900 text-xs font-bold"
           >
-            Dismiss
+            ✕
           </button>
         </div>
       )}
 
       {errorMessage && (
-        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 flex items-center justify-between text-sm shadow-xs">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-red-600 shrink-0" />
-            <span>{errorMessage}</span>
-          </div>
+        <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-800 text-sm flex items-start gap-3 shadow-xs">
+          <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 font-medium">{errorMessage}</div>
           <button
+            type="button"
             onClick={() => setErrorMessage(null)}
-            className="text-xs font-semibold text-red-700 hover:text-red-900"
+            className="text-red-700 hover:text-red-900 text-xs font-bold"
           >
-            Dismiss
+            ✕
           </button>
         </div>
       )}
 
-      {/* Category Filter Pills */}
-      <div className="flex items-center gap-2 border-b border-[#E2DBD0] pb-2">
-        <span className="text-xs font-mono uppercase tracking-wider text-[#706E69] mr-2">
-          Scope:
-        </span>
-        <button
-          onClick={() => setCategoryFilter('all')}
-          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-            categoryFilter === 'all'
-              ? 'bg-[#244634] text-white'
-              : 'bg-[#F4EFE6] text-[#5C5E5B] hover:text-[#181918]'
-          }`}
-        >
-          All Sections ({TABS.length})
-        </button>
-        <button
-          onClick={() => setCategoryFilter('homepage')}
-          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-            categoryFilter === 'homepage'
-              ? 'bg-[#244634] text-white'
-              : 'bg-[#F4EFE6] text-[#5C5E5B] hover:text-[#181918]'
-          }`}
-        >
-          Homepage ({TABS.filter((t) => t.category === 'homepage').length})
-        </button>
-        <button
-          onClick={() => setCategoryFilter('pages')}
-          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
-            categoryFilter === 'pages'
-              ? 'bg-[#244634] text-white'
-              : 'bg-[#F4EFE6] text-[#5C5E5B] hover:text-[#181918]'
-          }`}
-        >
-          Dedicated Pages ({TABS.filter((t) => t.category === 'pages').length})
-        </button>
-      </div>
+      {hasUnsavedChanges && (
+        <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span>
+              You have unsaved edits in <strong>{activeCategoryDef.label}</strong>. Click <strong>Save Changes</strong> to apply them to the public website.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={handleDiscardChanges}
+            className="text-amber-800 hover:underline font-semibold"
+          >
+            Discard
+          </button>
+        </div>
+      )}
 
-      {/* Tabs Navigation Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-        {filteredTabs.map((tab) => {
-          const enabled = getSectionEnabledState(tab.key);
-          const isSelected = activeTab === tab.key;
+      {/* 3. CATEGORY NAVIGATION TABS */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+        {CATEGORIES.map((cat) => {
+          const Icon = cat.icon;
+          const isSelected = activeCategory === cat.id;
+          const status = getCategoryStatus(cat.id);
 
           return (
             <button
-              key={tab.key}
-              onClick={() => setActiveTab(tab.key)}
-              className={`p-3 rounded-xl border text-left flex flex-col justify-between transition-all ${
+              key={cat.id}
+              type="button"
+              onClick={() => setActiveCategory(cat.id)}
+              className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
                 isSelected
-                  ? 'bg-white border-[#244634] shadow-sm ring-1 ring-[#244634]'
-                  : 'bg-[#FAF7F2] border-[#E2DBD0] hover:bg-white hover:border-[#C5D8CC]'
+                  ? 'bg-[#0f2c59] text-white border-[#0f2c59] shadow-md shadow-[#0f2c59]/10'
+                  : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50/80 shadow-xs'
               }`}
             >
-              <div className="flex items-center justify-between w-full mb-1">
-                <span
-                  className={`${
-                    isSelected ? 'text-[#244634]' : 'text-[#706E69]'
+              <div className="flex items-center justify-between w-full mb-2">
+                <div
+                  className={`w-8 h-8 rounded-xl flex items-center justify-center ${
+                    isSelected ? 'bg-white/15 text-white' : 'bg-slate-100 text-[#0f2c59]'
                   }`}
                 >
-                  {tab.icon}
-                </span>
+                  <Icon className="w-4 h-4" />
+                </div>
                 <span
-                  className={`w-2 h-2 rounded-full ${
-                    enabled ? 'bg-emerald-500' : 'bg-gray-300'
+                  className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${
+                    isSelected ? 'bg-white/20 text-white border-white/30' : status.color
                   }`}
-                  title={enabled ? 'Visible' : 'Hidden'}
-                />
+                >
+                  {status.label}
+                </span>
               </div>
-              <span
-                className={`text-xs font-medium truncate ${
-                  isSelected ? 'text-[#181918] font-semibold' : 'text-[#5C5E5B]'
-                }`}
-              >
-                {tab.label}
-              </span>
+              <div>
+                <p className={`text-xs font-bold leading-snug ${isSelected ? 'text-white' : 'text-[#0f2c59]'}`}>
+                  {cat.label}
+                </p>
+                <p className={`text-[11px] truncate mt-0.5 ${isSelected ? 'text-slate-200' : 'text-slate-500'}`}>
+                  {cat.badgeLabel}
+                </p>
+              </div>
             </button>
           );
         })}
       </div>
 
-      {/* Main Section Editor Card */}
-      <div className="bg-white rounded-2xl border border-[#E2DBD0] shadow-xs overflow-hidden">
-        {/* Editor Card Header with Master Visibility Switch */}
-        <div className="p-6 border-b border-[#E8E2D7] bg-[#FAF7F2]/60 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* 4. MAIN EDITOR CONTAINER */}
+      <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+        {/* Category Header */}
+        <div className="pb-6 mb-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <div className="flex items-center gap-3">
-              <span className="p-2 rounded-lg bg-[#EAF0EC] text-[#244634]">
-                {currentTabDef.icon}
-              </span>
-              <div>
-                <h2 className="font-editorial text-2xl font-semibold text-[#181918]">
-                  {currentTabDef.label}
-                </h2>
-                <p className="text-xs text-[#5C5E5B] mt-0.5">
-                  {currentTabDef.description}
-                </p>
-              </div>
-            </div>
+            <h2 className="text-xl font-bold font-serif text-[#0f2c59] flex items-center gap-2">
+              <span>{activeCategoryDef.label}</span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-1">{activeCategoryDef.description}</p>
           </div>
-
-          {/* Master Enable/Disable Control */}
-          <div className="flex items-center gap-3 bg-white px-4 py-2.5 rounded-xl border border-[#E2DBD0] shadow-xs">
-            <div className="text-right">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-[#181918]">
-                  Section Visibility:
-                </span>
-                {isCurrentEnabled ? (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                    <Eye className="w-3 h-3 text-emerald-600" />
-                    Visible
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-                    <EyeOff className="w-3 h-3 text-amber-600" />
-                    Hidden
-                  </span>
-                )}
-              </div>
-              <p className="text-[10px] text-[#706E69]">
-                {isCurrentEnabled
-                  ? 'Rendering on public site'
-                  : 'Hidden from public visitors'}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => toggleSectionEnabled(activeTab)}
-              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-hidden ${
-                isCurrentEnabled ? 'bg-[#244634]' : 'bg-gray-300'
+          <div className="flex items-center gap-2">
+            <span
+              className={`text-xs font-semibold px-3 py-1 rounded-full border ${
+                getCategoryStatus(activeCategory).color
               }`}
             >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out ${
-                  isCurrentEnabled ? 'translate-x-5' : 'translate-x-0'
-                }`}
-              />
-            </button>
+              {getCategoryStatus(activeCategory).label}
+            </span>
           </div>
         </div>
 
-        {/* Tab Specific Form Content */}
-        <div className="p-6 sm:p-8 space-y-6">
-          {/* HERO TAB */}
-          {activeTab === 'hero' && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1.5 font-semibold">
-                    Eyebrow Badge
+        {loading ? (
+          <div className="py-20 text-center space-y-3">
+            <RefreshCw className="w-8 h-8 text-[#138354] animate-spin mx-auto" />
+            <p className="text-sm font-medium text-slate-600">Loading website content from Firestore...</p>
+          </div>
+        ) : (
+          <div>
+            {/* ------------------------------------------------------------- */}
+            {/* CATEGORY 1: BRANDING & HEADER                                  */}
+            {/* ------------------------------------------------------------- */}
+            {activeCategory === 'branding' && (
+              <div className="space-y-8">
+                {/* Visual Header Mockup Preview */}
+                <div className="bg-slate-50 p-5 rounded-2xl border border-slate-200">
+                  <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                    Live Header Preview (How it appears to website visitors)
+                  </p>
+                  <div className="bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {branding.showLogo !== false && (
+                        <div
+                          className={`rounded-full overflow-hidden border-2 border-[#0f2c59] bg-slate-100 flex-shrink-0 ${
+                            branding.logoSize === 'small'
+                              ? 'w-8 h-8'
+                              : branding.logoSize === 'large'
+                              ? 'w-12 h-12'
+                              : 'w-10 h-10'
+                          }`}
+                        >
+                          <img
+                            src={branding.logoUrl || hero.profileImageUrl || DEFAULT_PROFILE_IMAGE}
+                            alt="Logo"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.src = DEFAULT_PROFILE_IMAGE;
+                            }}
+                          />
+                        </div>
+                      )}
+                      <div>
+                        {branding.showBusinessName !== false && (
+                          <p className="font-serif font-bold text-base text-[#0f2c59] leading-tight">
+                            {branding.businessName || 'Finance with Geetha'}
+                          </p>
+                        )}
+                        {branding.showTagline !== false && (
+                          <p className="text-[10px] font-semibold text-[#138354] uppercase tracking-wider leading-none">
+                            {branding.tagline || 'Bookkeeping & Accounting'}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="hidden md:flex items-center gap-4 text-xs font-medium text-slate-600">
+                      <span>About</span>
+                      <span>Services</span>
+                      <span>Why Us</span>
+                      <span>Contact</span>
+                      <span className="bg-[#138354] text-white px-3 py-1.5 rounded-lg text-xs font-semibold">
+                        Book Consultation
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Identity Inputs */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Business Name
+                    </label>
+                    <input
+                      type="text"
+                      value={branding.businessName}
+                      onChange={(e) => setBranding({ ...branding, businessName: e.target.value })}
+                      placeholder="Finance with Geetha"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0f2c59]"
+                    />
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Appears in the header navigation, page title, and copyright notices.
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Tagline / Sub-label
+                    </label>
+                    <input
+                      type="text"
+                      value={branding.tagline}
+                      onChange={(e) => setBranding({ ...branding, tagline: e.target.value })}
+                      placeholder="Bookkeeping & Accounting"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0f2c59]"
+                    />
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      Appears directly below your business name in the header.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Logo Image & Upload */}
+                <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-4">
+                  <h3 className="text-sm font-bold text-[#0f2c59] flex items-center gap-2">
+                    <Camera className="w-4 h-4 text-[#138354]" />
+                    <span>Website Logo / Profile Portrait</span>
+                  </h3>
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+                    <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-[#0f2c59] shadow-sm bg-slate-100 flex-shrink-0">
+                      <img
+                        src={branding.logoUrl || hero.profileImageUrl || DEFAULT_PROFILE_IMAGE}
+                        alt="Logo preview"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = DEFAULT_PROFILE_IMAGE;
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 space-y-2">
+                      <div className="flex items-center gap-3">
+                        <label className="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#0f2c59] hover:bg-[#138354] transition-colors cursor-pointer shadow-xs">
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>{uploadingLogo ? 'Uploading...' : 'Upload New Logo'}</span>
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/svg+xml"
+                            disabled={uploadingLogo}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleLogoUpload(file);
+                            }}
+                            className="sr-only"
+                          />
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => setBranding({ ...branding, logoUrl: DEFAULT_PROFILE_IMAGE })}
+                          className="text-xs text-slate-600 hover:text-slate-800 underline font-medium"
+                        >
+                          Reset to Default
+                        </button>
+                      </div>
+
+                      {uploadingLogo && (
+                        <div className="w-full max-w-xs space-y-1">
+                          <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-[#138354] transition-all duration-200"
+                              style={{ width: `${logoUploadProgress}%` }}
+                            />
+                          </div>
+                          <p className="text-[11px] text-slate-500 font-mono">
+                            Uploading... {logoUploadProgress}%
+                          </p>
+                        </div>
+                      )}
+
+                      <p className="text-xs text-slate-500">
+                        Supports JPEG, PNG, WebP, or SVG. Maximum file size: 5MB. Uploaded images are stored securely in Firebase Storage.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Header Display Controls */}
+                <div className="p-6 rounded-2xl border border-slate-200 bg-white space-y-4">
+                  <h3 className="text-sm font-bold text-[#0f2c59]">Header Display Settings</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={branding.showLogo !== false}
+                        onChange={(e) => setBranding({ ...branding, showLogo: e.target.checked })}
+                        className="rounded text-[#138354] focus:ring-[#138354]"
+                      />
+                      <span className="text-xs font-semibold text-slate-800">Show Logo Image</span>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={branding.showBusinessName !== false}
+                        onChange={(e) => setBranding({ ...branding, showBusinessName: e.target.checked })}
+                        className="rounded text-[#138354] focus:ring-[#138354]"
+                      />
+                      <span className="text-xs font-semibold text-slate-800">Show Business Name</span>
+                    </label>
+
+                    <label className="flex items-center gap-2.5 p-3 rounded-xl border border-slate-200 hover:bg-slate-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={branding.showTagline !== false}
+                        onChange={(e) => setBranding({ ...branding, showTagline: e.target.checked })}
+                        className="rounded text-[#138354] focus:ring-[#138354]"
+                      />
+                      <span className="text-xs font-semibold text-slate-800">Show Tagline</span>
+                    </label>
+                  </div>
+
+                  {/* Logo Size Selection */}
+                  <div className="pt-3 border-t border-slate-100">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-2">
+                      Logo Size in Header
+                    </label>
+                    <div className="flex items-center gap-4">
+                      {(['small', 'medium', 'large'] as const).map((size) => (
+                        <label key={size} className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700 capitalize">
+                          <input
+                            type="radio"
+                            name="logoSize"
+                            value={size}
+                            checked={(branding.logoSize || 'medium') === size}
+                            onChange={() => setBranding({ ...branding, logoSize: size })}
+                            className="text-[#138354] focus:ring-[#138354]"
+                          />
+                          <span>{size} ({size === 'small' ? '32px' : size === 'large' ? '48px' : '40px'})</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ------------------------------------------------------------- */}
+            {/* CATEGORY 2: HOMEPAGE HERO BANNER                              */}
+            {/* ------------------------------------------------------------- */}
+            {activeCategory === 'hero' && (
+              <div className="space-y-8">
+                {/* Hero Visibility Switch */}
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#0f2c59]">Hero Section Visibility</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Toggle whether the Hero banner is displayed at the top of the homepage.
+                    </p>
+                  </div>
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={hero.enabled !== false}
+                      onChange={(e) => setHero({ ...hero, enabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#138354]"></div>
+                    <span className="text-xs font-bold text-slate-800">
+                      {hero.enabled !== false ? 'Section Visible' : 'Section Hidden'}
+                    </span>
                   </label>
-                  <input
-                    type="text"
-                    value={hero.eyebrow}
-                    onChange={(e) => setHero({ ...hero, eyebrow: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#D8D1C5] focus:outline-hidden focus:border-[#244634] text-sm"
-                  />
+                </div>
+
+                {/* Main Headline & Description */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Eyebrow Label
+                    </label>
+                    <input
+                      type="text"
+                      value={hero.eyebrow}
+                      onChange={(e) => setHero({ ...hero, eyebrow: e.target.value })}
+                      placeholder="PROFESSIONAL ACCOUNTING & BOOKKEEPING"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0f2c59]"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Main Heading
+                    </label>
+                    <input
+                      type="text"
+                      value={hero.headline}
+                      onChange={(e) => setHero({ ...hero, headline: e.target.value })}
+                      placeholder="Take Control of Your Business Finances"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-[#0f2c59] focus:outline-none focus:ring-2 focus:ring-[#0f2c59]"
+                    />
+                  </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1.5 font-semibold">
-                    Headline
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Supporting Description Copy
                   </label>
-                  <input
-                    type="text"
-                    value={hero.headline}
-                    onChange={(e) => setHero({ ...hero, headline: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#D8D1C5] focus:outline-hidden focus:border-[#244634] text-sm font-medium"
+                  <textarea
+                    rows={3}
+                    value={hero.supportingCopy}
+                    onChange={(e) => setHero({ ...hero, supportingCopy: e.target.value })}
+                    placeholder="Accurate, reliable, and stress-free bookkeeping services tailored for businesses..."
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#0f2c59]"
                   />
                 </div>
-              </div>
 
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1.5 font-semibold">
-                  Supporting Copy
-                </label>
-                <textarea
-                  rows={3}
-                  value={hero.supportingCopy}
-                  onChange={(e) => setHero({ ...hero, supportingCopy: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#D8D1C5] focus:outline-hidden focus:border-[#244634] text-sm leading-relaxed"
-                />
-              </div>
+                {/* Hero Action Buttons */}
+                <div className="p-6 rounded-2xl border border-slate-200 bg-white space-y-4">
+                  <h3 className="text-sm font-bold text-[#0f2c59]">Call-to-Action Buttons</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                    {/* Primary Button */}
+                    <div className="space-y-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                      <span className="text-xs font-bold text-[#138354] uppercase tracking-wider">
+                        Primary Button (Green)
+                      </span>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Button Text</label>
+                        <input
+                          type="text"
+                          value={hero.primaryButtonText || ''}
+                          onChange={(e) => setHero({ ...hero, primaryButtonText: e.target.value })}
+                          placeholder="Schedule Consultation"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-800"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Destination URL / Anchor</label>
+                        <input
+                          type="text"
+                          value={hero.primaryButtonLink || '/#contact'}
+                          onChange={(e) => setHero({ ...hero, primaryButtonLink: e.target.value })}
+                          placeholder="/#contact"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono text-slate-800"
+                        />
+                      </div>
+                    </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 rounded-xl bg-[#FAF7F2] border border-[#E2DBD0]">
+                    {/* Secondary Button */}
+                    <div className="space-y-3 p-4 rounded-xl bg-slate-50 border border-slate-200">
+                      <span className="text-xs font-bold text-[#0f2c59] uppercase tracking-wider">
+                        Secondary Button (Outline)
+                      </span>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Button Text</label>
+                        <input
+                          type="text"
+                          value={hero.secondaryButtonText || ''}
+                          onChange={(e) => setHero({ ...hero, secondaryButtonText: e.target.value })}
+                          placeholder="View Services"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-800"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Destination URL / Anchor</label>
+                        <input
+                          type="text"
+                          value={hero.secondaryButtonLink || '/#services'}
+                          onChange={(e) => setHero({ ...hero, secondaryButtonLink: e.target.value })}
+                          placeholder="/#services"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono text-slate-800"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Trust Badges */}
+                <div className="p-6 rounded-2xl border border-slate-200 bg-white space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#0f2c59]">Trust Indicator Badges</h3>
+                      <p className="text-xs text-slate-500">Short reassurance bullet points below the CTA buttons.</p>
+                    </div>
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={hero.showTrustIndicators !== false}
+                        onChange={(e) => setHero({ ...hero, showTrustIndicators: e.target.checked })}
+                        className="rounded text-[#138354] focus:ring-[#138354]"
+                      />
+                      <span className="text-xs font-semibold text-slate-700">Show Badges</span>
+                    </label>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">Badge 1</label>
+                      <input
+                        type="text"
+                        value={hero.trustIndicator1 || '100% Confidential'}
+                        onChange={(e) => setHero({ ...hero, trustIndicator1: e.target.value })}
+                        placeholder="100% Confidential"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">Badge 2</label>
+                      <input
+                        type="text"
+                        value={hero.trustIndicator2 || 'Tailored Solutions'}
+                        onChange={(e) => setHero({ ...hero, trustIndicator2: e.target.value })}
+                        placeholder="Tailored Solutions"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-semibold"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Hero Profile Card Editor */}
+                <div className="p-6 rounded-2xl border border-slate-200 bg-slate-50/70 space-y-5">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-bold text-[#0f2c59] flex items-center gap-2">
+                        <Users className="w-4 h-4 text-[#138354]" />
+                        <span>Hero Profile Card</span>
+                      </h3>
+                      <p className="text-xs text-slate-500">
+                        Prominent photo card displayed alongside the hero text.
+                      </p>
+                    </div>
+                    <label className="inline-flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={hero.showProfileCard !== false}
+                        onChange={(e) => setHero({ ...hero, showProfileCard: e.target.checked })}
+                        className="rounded text-[#138354] focus:ring-[#138354]"
+                      />
+                      <span className="text-xs font-bold text-slate-800">
+                        {hero.showProfileCard !== false ? 'Card Visible' : 'Card Hidden'}
+                      </span>
+                    </label>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row items-start gap-6 pt-2">
+                    {/* Profile Photo Upload */}
+                    <div className="space-y-2 flex-shrink-0 text-center">
+                      <div className="w-28 h-28 rounded-2xl overflow-hidden border-2 border-[#0f2c59] shadow-sm bg-white mx-auto">
+                        <img
+                          src={hero.profileImageUrl || DEFAULT_PROFILE_IMAGE}
+                          alt="Profile Preview"
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.src = DEFAULT_PROFILE_IMAGE;
+                          }}
+                        />
+                      </div>
+                      <label className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white bg-[#0f2c59] hover:bg-[#138354] transition-colors cursor-pointer shadow-xs">
+                        <Camera className="w-3.5 h-3.5" />
+                        <span>{uploadingPhoto ? 'Uploading...' : 'Change Photo'}</span>
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          disabled={uploadingPhoto}
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) handlePhotoUpload(file);
+                          }}
+                          className="sr-only"
+                        />
+                      </label>
+                      {uploadingPhoto && (
+                        <p className="text-[11px] text-slate-500 font-mono">
+                          Uploading... {photoUploadProgress}%
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Card Profile Fields */}
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                          Display Name
+                        </label>
+                        <input
+                          type="text"
+                          value={hero.profileName || ''}
+                          onChange={(e) => setHero({ ...hero, profileName: e.target.value })}
+                          placeholder="Geetha N."
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-bold text-[#0f2c59]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                          Professional Title
+                        </label>
+                        <input
+                          type="text"
+                          value={hero.profileRole || ''}
+                          onChange={(e) => setHero({ ...hero, profileRole: e.target.value })}
+                          placeholder="Independent Bookkeeper & Accountant"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-[#138354]"
+                        />
+                      </div>
+
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                          Short Bio / Description
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={hero.profileDescription || ''}
+                          onChange={(e) => setHero({ ...hero, profileDescription: e.target.value })}
+                          placeholder="Dedicated financial partner helping you maintain clean books..."
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-700"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                          Phone Number
+                        </label>
+                        <input
+                          type="text"
+                          value={hero.profilePhone || ''}
+                          onChange={(e) => setHero({ ...hero, profilePhone: e.target.value })}
+                          placeholder="9538913912"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono font-semibold"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-700 uppercase mb-1">
+                          Email Address
+                        </label>
+                        <input
+                          type="email"
+                          value={hero.profileEmail || ''}
+                          onChange={(e) => setHero({ ...hero, profileEmail: e.target.value })}
+                          placeholder="Cageethanofficail@gmail.com"
+                          className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* ------------------------------------------------------------- */}
+            {/* CATEGORY 3: SERVICES & OFFERINGS                              */}
+            {/* ------------------------------------------------------------- */}
+            {activeCategory === 'services' && (
+              <div className="space-y-6">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-semibold text-[#0f2c59]">Services Section Visibility</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Toggle whether the Services section appears on the homepage.
+                    </p>
+                  </div>
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={teaching.enabled !== false}
+                      onChange={(e) => setTeaching({ ...teaching, enabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#138354]"></div>
+                    <span className="text-xs font-bold text-slate-800">
+                      {teaching.enabled !== false ? 'Section Visible' : 'Section Hidden'}
+                    </span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Section Eyebrow
+                    </label>
+                    <input
+                      type="text"
+                      value={teaching.eyebrow}
+                      onChange={(e) => setTeaching({ ...teaching, eyebrow: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Section Heading
+                    </label>
+                    <input
+                      type="text"
+                      value={teaching.title}
+                      onChange={(e) => setTeaching({ ...teaching, title: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-[#0f2c59]"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1.5 font-semibold">
-                    Credibility Quote
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Intro Description
                   </label>
                   <textarea
                     rows={2}
-                    value={hero.credibilityQuote}
-                    onChange={(e) =>
-                      setHero({ ...hero, credibilityQuote: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2 rounded-lg border border-[#D8D1C5] bg-white text-sm"
+                    value={teaching.description}
+                    onChange={(e) => setTeaching({ ...teaching, description: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1.5 font-semibold">
-                    Quote Attribution
-                  </label>
-                  <input
-                    type="text"
-                    value={hero.credibilityAuthor}
-                    onChange={(e) =>
-                      setHero({ ...hero, credibilityAuthor: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2 rounded-lg border border-[#D8D1C5] bg-white text-sm mt-1"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1.5 font-semibold">
-                    Primary Button Label
-                  </label>
-                  <input
-                    type="text"
-                    value={hero.primaryButtonText}
-                    onChange={(e) =>
-                      setHero({ ...hero, primaryButtonText: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1.5 font-semibold">
-                    Secondary Button Label
-                  </label>
-                  <input
-                    type="text"
-                    value={hero.secondaryButtonText}
-                    onChange={(e) =>
-                      setHero({ ...hero, secondaryButtonText: e.target.value })
-                    }
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* STATS TAB */}
-          {activeTab === 'stats' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Eyebrow
-                  </label>
-                  <input
-                    type="text"
-                    value={stats.eyebrow}
-                    onChange={(e) => setStats({ ...stats, eyebrow: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Heading
-                  </label>
-                  <input
-                    type="text"
-                    value={stats.title}
-                    onChange={(e) => setStats({ ...stats, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Subtitle
-                  </label>
-                  <input
-                    type="text"
-                    value={stats.subtitle}
-                    onChange={(e) => setStats({ ...stats, subtitle: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-[#181918]">
-                    Individual Stat Cards ({stats.stats?.length || 0})
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setStats({
-                        ...stats,
-                        stats: [
-                          ...(stats.stats || []),
-                          {
-                            id: `stat-${Date.now()}`,
-                            enabled: true,
-                            value: '100%',
-                            label: 'Metric Name',
-                            detail: 'Supporting context detail',
-                          },
-                        ],
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 text-xs text-[#244634] font-semibold bg-[#EAF0EC] px-3 py-1.5 rounded-lg hover:bg-[#D8E6DB]"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Stat Card
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {stats.stats?.map((stat, idx) => (
-                    <div
-                      key={stat.id || idx}
-                      className="p-4 rounded-xl border border-[#E2DBD0] bg-[#FAF7F2] space-y-3 relative"
+                {/* Service Cards List */}
+                <div className="space-y-4 pt-4 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-[#0f2c59]">
+                      Service Package Offerings ({teaching.topics.length})
+                    </h3>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newTopic = {
+                          id: `topic-${Date.now()}`,
+                          enabled: true,
+                          number: String(teaching.topics.length + 1).padStart(2, '0'),
+                          title: 'New Service Package',
+                          tagline: 'Service overview and key deliverables',
+                          description: '✔ Core deliverable 1\n✔ Core deliverable 2',
+                          takeaways: ['Feature 1', 'Feature 2'],
+                        };
+                        setTeaching({ ...teaching, topics: [...teaching.topics, newTopic] });
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-[#0f2c59] hover:bg-[#138354] transition-colors"
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs font-mono uppercase tracking-wider text-[#706E69]">
-                            Active:
-                          </label>
-                          <input
-                            type="checkbox"
-                            checked={stat.enabled !== false}
-                            onChange={(e) => {
-                              const updated = [...stats.stats];
-                              updated[idx] = { ...updated[idx], enabled: e.target.checked };
-                              setStats({ ...stats, stats: updated });
-                            }}
-                            className="rounded text-[#244634] focus:ring-[#244634] w-4 h-4"
-                          />
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const updated = stats.stats.filter((_, i) => i !== idx);
-                            setStats({ ...stats, stats: updated });
-                          }}
-                          className="text-xs text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
+                      <Plus className="w-3.5 h-3.5" />
+                      <span>Add Service Package</span>
+                    </button>
+                  </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <div>
-                          <label className="block text-[11px] text-[#706E69]">Display Value</label>
-                          <input
-                            type="text"
-                            value={stat.value}
-                            onChange={(e) => {
-                              const updated = [...stats.stats];
-                              updated[idx] = { ...updated[idx], value: e.target.value };
-                              setStats({ ...stats, stats: updated });
-                            }}
-                            className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-sm font-semibold"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] text-[#706E69]">Metric Label</label>
-                          <input
-                            type="text"
-                            value={stat.label}
-                            onChange={(e) => {
-                              const updated = [...stats.stats];
-                              updated[idx] = { ...updated[idx], label: e.target.value };
-                              setStats({ ...stats, stats: updated });
-                            }}
-                            className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-[11px] text-[#706E69]">Description Detail</label>
-                        <input
-                          type="text"
-                          value={stat.detail}
-                          onChange={(e) => {
-                            const updated = [...stats.stats];
-                            updated[idx] = { ...updated[idx], detail: e.target.value };
-                            setStats({ ...stats, stats: updated });
-                          }}
-                          className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs"
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* TEACHING TAB */}
-          {activeTab === 'teaching' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Eyebrow
-                  </label>
-                  <input
-                    type="text"
-                    value={teaching.eyebrow}
-                    onChange={(e) => setTeaching({ ...teaching, eyebrow: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    value={teaching.title}
-                    onChange={(e) => setTeaching({ ...teaching, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                  Description
-                </label>
-                <textarea
-                  rows={2}
-                  value={teaching.description}
-                  onChange={(e) => setTeaching({ ...teaching, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-[#181918]">
-                    Curriculum Cards ({teaching.topics?.length || 0})
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setTeaching({
-                        ...teaching,
-                        topics: [
-                          ...(teaching.topics || []),
-                          {
-                            id: `topic-${Date.now()}`,
-                            enabled: true,
-                            number: `0${(teaching.topics?.length || 0) + 1}`,
-                            title: 'New Topic',
-                            tagline: 'Practical operational focus',
-                            description: 'How to execute this step calmly.',
-                            takeaways: ['Step 1', 'Step 2'],
-                          },
-                        ],
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 text-xs text-[#244634] font-semibold bg-[#EAF0EC] px-3 py-1.5 rounded-lg hover:bg-[#D8E6DB]"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Curriculum Card
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  {teaching.topics?.map((topic, idx) => (
-                    <div
-                      key={topic.id || idx}
-                      className="p-5 rounded-xl border border-[#E2DBD0] bg-[#FAF7F2] space-y-3"
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="font-mono text-xs font-bold px-2 py-0.5 rounded bg-white border border-[#D8D1C5]">
-                            {topic.number}
+                  <div className="space-y-4">
+                    {teaching.topics.map((topic, idx) => (
+                      <div
+                        key={topic.id || idx}
+                        className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-mono font-bold text-[#138354] bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-md">
+                            Package #{topic.number || idx + 1}
                           </span>
-                          <span className="text-sm font-semibold text-[#181918]">
-                            {topic.title}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-4">
-                          <label className="inline-flex items-center gap-1.5 text-xs text-[#5C5E5B]">
-                            <input
-                              type="checkbox"
-                              checked={topic.enabled !== false}
-                              onChange={(e) => {
-                                const updated = [...teaching.topics];
-                                updated[idx] = { ...updated[idx], enabled: e.target.checked };
+                          <div className="flex items-center gap-3">
+                            <label className="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-700">
+                              <input
+                                type="checkbox"
+                                checked={topic.enabled !== false}
+                                onChange={(e) => {
+                                  const updated = [...teaching.topics];
+                                  updated[idx] = { ...updated[idx], enabled: e.target.checked };
+                                  setTeaching({ ...teaching, topics: updated });
+                                }}
+                                className="rounded text-[#138354]"
+                              />
+                              <span>Active</span>
+                            </label>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const updated = teaching.topics.filter((_, i) => i !== idx);
                                 setTeaching({ ...teaching, topics: updated });
                               }}
-                              className="rounded text-[#244634] w-4 h-4"
+                              className="text-red-500 hover:text-red-700 p-1"
+                              title="Delete package"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Service Title</label>
+                            <input
+                              type="text"
+                              value={topic.title}
+                              onChange={(e) => {
+                                const updated = [...teaching.topics];
+                                updated[idx] = { ...updated[idx], title: e.target.value };
+                                setTeaching({ ...teaching, topics: updated });
+                              }}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-bold text-[#0f2c59]"
                             />
-                            Visible
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-semibold text-slate-600 mb-1">Tagline</label>
+                            <input
+                              type="text"
+                              value={topic.tagline}
+                              onChange={(e) => {
+                                const updated = [...teaching.topics];
+                                updated[idx] = { ...updated[idx], tagline: e.target.value };
+                                setTeaching({ ...teaching, topics: updated });
+                              }}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                            Included Deliverables (Line separated)
                           </label>
-
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const updated = teaching.topics.filter((_, i) => i !== idx);
-                              setTeaching({ ...teaching, topics: updated });
-                            }}
-                            className="text-xs text-red-600 hover:text-red-800"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-[11px] text-[#706E69]">Number</label>
-                          <input
-                            type="text"
-                            value={topic.number}
+                          <textarea
+                            rows={2}
+                            value={topic.description}
                             onChange={(e) => {
                               const updated = [...teaching.topics];
-                              updated[idx] = { ...updated[idx], number: e.target.value };
+                              updated[idx] = { ...updated[idx], description: e.target.value };
                               setTeaching({ ...teaching, topics: updated });
                             }}
-                            className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs font-mono"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] text-[#706E69]">Title</label>
-                          <input
-                            type="text"
-                            value={topic.title}
-                            onChange={(e) => {
-                              const updated = [...teaching.topics];
-                              updated[idx] = { ...updated[idx], title: e.target.value };
-                              setTeaching({ ...teaching, topics: updated });
-                            }}
-                            className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs font-medium"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] text-[#706E69]">Tagline</label>
-                          <input
-                            type="text"
-                            value={topic.tagline}
-                            onChange={(e) => {
-                              const updated = [...teaching.topics];
-                              updated[idx] = { ...updated[idx], tagline: e.target.value };
-                              setTeaching({ ...teaching, topics: updated });
-                            }}
-                            className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs"
+                            className="w-full px-3 py-2 rounded-lg border border-slate-300 text-xs font-mono"
                           />
                         </div>
                       </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
+            {/* ------------------------------------------------------------- */}
+            {/* CATEGORY 4: ABOUT & WHY CHOOSE US                             */}
+            {/* ------------------------------------------------------------- */}
+            {activeCategory === 'aboutWhyUs' && (
+              <div className="space-y-6">
+                {/* Sub-tab pills */}
+                <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl w-fit">
+                  <button
+                    type="button"
+                    onClick={() => setSubTabAboutWhyUs('about')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      subTabAboutWhyUs === 'about'
+                        ? 'bg-white text-[#0f2c59] shadow-xs'
+                        : 'text-slate-600 hover:text-slate-800'
+                    }`}
+                  >
+                    About Geetha N. ({about.enabled !== false ? 'Active' : 'Hidden'})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubTabAboutWhyUs('whyUs')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      subTabAboutWhyUs === 'whyUs'
+                        ? 'bg-white text-[#0f2c59] shadow-xs'
+                        : 'text-slate-600 hover:text-slate-800'
+                    }`}
+                  >
+                    Why Choose Us ({whyUs.enabled !== false ? 'Active' : 'Hidden'})
+                  </button>
+                </div>
+
+                {/* SUB-TAB 1: ABOUT SECTION */}
+                {subTabAboutWhyUs === 'about' && (
+                  <div className="space-y-6">
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                       <div>
-                        <label className="block text-[11px] text-[#706E69]">Description</label>
-                        <textarea
-                          rows={2}
-                          value={topic.description}
-                          onChange={(e) => {
-                            const updated = [...teaching.topics];
-                            updated[idx] = { ...updated[idx], description: e.target.value };
-                            setTeaching({ ...teaching, topics: updated });
-                          }}
-                          className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs"
+                        <h4 className="text-sm font-semibold text-[#0f2c59]">About Section Visibility</h4>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Controls the About section and its 3 feature cards on the homepage.
+                        </p>
+                      </div>
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={about.enabled !== false}
+                          onChange={(e) => setAbout({ ...about, enabled: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#138354]"></div>
+                        <span className="text-xs font-bold text-slate-800">
+                          {about.enabled !== false ? 'Section Visible' : 'Section Hidden'}
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Eyebrow Label
+                        </label>
+                        <input
+                          type="text"
+                          value={about.eyebrow}
+                          onChange={(e) => setAbout({ ...about, eyebrow: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Main Heading
+                        </label>
+                        <input
+                          type="text"
+                          value={about.title}
+                          onChange={(e) => setAbout({ ...about, title: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-[#0f2c59]"
                         />
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* COMMUNITY TAB */}
-          {activeTab === 'community' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Eyebrow
-                  </label>
-                  <input
-                    type="text"
-                    value={community.eyebrow}
-                    onChange={(e) => setCommunity({ ...community, eyebrow: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    value={community.title}
-                    onChange={(e) => setCommunity({ ...community, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                  Subtitle
-                </label>
-                <input
-                  type="text"
-                  value={community.subtitle}
-                  onChange={(e) => setCommunity({ ...community, subtitle: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                  Description
-                </label>
-                <textarea
-                  rows={2}
-                  value={community.description}
-                  onChange={(e) => setCommunity({ ...community, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 rounded-xl bg-[#FAF7F2] border border-[#E2DBD0]">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Call Schedule Note
-                  </label>
-                  <input
-                    type="text"
-                    value={community.callSchedule}
-                    onChange={(e) =>
-                      setCommunity({ ...community, callSchedule: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] bg-white text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Billing Period
-                  </label>
-                  <input
-                    type="text"
-                    value={community.billingPeriod}
-                    onChange={(e) =>
-                      setCommunity({ ...community, billingPeriod: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] bg-white text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-[#181918]">
-                    Included Features List ({community.features?.length || 0})
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCommunity({
-                        ...community,
-                        features: [...(community.features || []), 'New community benefit'],
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 text-xs text-[#244634] font-semibold bg-[#EAF0EC] px-3 py-1.5 rounded-lg hover:bg-[#D8E6DB]"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Benefit
-                  </button>
-                </div>
-
-                <div className="space-y-2">
-                  {community.features?.map((feat, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={feat}
-                        onChange={(e) => {
-                          const updated = [...community.features];
-                          updated[idx] = e.target.value;
-                          setCommunity({ ...community, features: updated });
-                        }}
-                        className="flex-1 px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Biography & Introduction Copy
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={about.description || ''}
+                        onChange={(e) => setAbout({ ...about, description: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm"
                       />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = community.features.filter((_, i) => i !== idx);
-                          setCommunity({ ...community, features: updated });
-                        }}
-                        className="p-2 text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* CALL STRUCTURE TAB */}
-          {activeTab === 'callStructure' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Eyebrow
-                  </label>
-                  <input
-                    type="text"
-                    value={callStructure.eyebrow}
-                    onChange={(e) =>
-                      setCallStructure({ ...callStructure, eyebrow: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    value={callStructure.title}
-                    onChange={(e) =>
-                      setCallStructure({ ...callStructure, title: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                  Description
-                </label>
-                <textarea
-                  rows={2}
-                  value={callStructure.description}
-                  onChange={(e) =>
-                    setCallStructure({ ...callStructure, description: e.target.value })
-                  }
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                />
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-[#181918]">
-                    Agenda Segments ({callStructure.steps?.length || 0})
-                  </h3>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCallStructure({
-                        ...callStructure,
-                        steps: [
-                          ...(callStructure.steps || []),
-                          {
-                            id: `step-${Date.now()}`,
-                            enabled: true,
-                            number: `Step ${(callStructure.steps?.length || 0) + 1}`,
-                            title: 'New Segment',
-                            duration: '20 min',
-                            description: 'Agenda breakdown details.',
-                          },
-                        ],
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 text-xs text-[#244634] font-semibold bg-[#EAF0EC] px-3 py-1.5 rounded-lg hover:bg-[#D8E6DB]"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Segment
-                  </button>
-                </div>
-
-                <div className="space-y-4">
-                  {callStructure.steps?.map((step, idx) => (
-                    <div
-                      key={step.id || idx}
-                      className="p-4 rounded-xl border border-[#E2DBD0] bg-[#FAF7F2] space-y-3"
-                    >
+                    {/* Feature Cards */}
+                    <div className="space-y-4 pt-4 border-t border-slate-100">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <label className="text-xs font-semibold text-[#181918]">
-                            Active:
-                          </label>
-                          <input
-                            type="checkbox"
-                            checked={step.enabled !== false}
-                            onChange={(e) => {
-                              const updated = [...callStructure.steps];
-                              updated[idx] = { ...updated[idx], enabled: e.target.checked };
-                              setCallStructure({ ...callStructure, steps: updated });
-                            }}
-                            className="rounded text-[#244634] w-4 h-4"
-                          />
+                        <div>
+                          <h3 className="text-sm font-bold text-[#0f2c59]">
+                            Core Value Feature Cards ({about.cards?.length || 3})
+                          </h3>
+                          <p className="text-xs text-slate-500">
+                            The 3 feature cards displayed evenly on desktop (Absolute Accuracy, Save Time & Energy, Personalized Approach).
+                          </p>
                         </div>
                         <button
                           type="button"
                           onClick={() => {
-                            const updated = callStructure.steps.filter((_, i) => i !== idx);
-                            setCallStructure({ ...callStructure, steps: updated });
+                            const currentCards = about.cards ? [...about.cards] : [];
+                            currentCards.push({
+                              id: `card-${Date.now()}`,
+                              enabled: true,
+                              title: 'New Feature Card',
+                              description: 'Description of value proposition or guarantee.',
+                            });
+                            setAbout({ ...about, cards: currentCards });
                           }}
-                          className="text-xs text-red-600 hover:text-red-800"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-white bg-[#0f2c59] hover:bg-[#138354] transition-colors"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>Add Feature Card</span>
                         </button>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        <div>
-                          <label className="block text-[11px] text-[#706E69]">Step Badge</label>
-                          <input
-                            type="text"
-                            value={step.number}
-                            onChange={(e) => {
-                              const updated = [...callStructure.steps];
-                              updated[idx] = { ...updated[idx], number: e.target.value };
-                              setCallStructure({ ...callStructure, steps: updated });
-                            }}
-                            className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs font-mono"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] text-[#706E69]">Title</label>
-                          <input
-                            type="text"
-                            value={step.title}
-                            onChange={(e) => {
-                              const updated = [...callStructure.steps];
-                              updated[idx] = { ...updated[idx], title: e.target.value };
-                              setCallStructure({ ...callStructure, steps: updated });
-                            }}
-                            className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs font-medium"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-[11px] text-[#706E69]">Duration / Tag</label>
-                          <input
-                            type="text"
-                            value={step.duration}
-                            onChange={(e) => {
-                              const updated = [...callStructure.steps];
-                              updated[idx] = { ...updated[idx], duration: e.target.value };
-                              setCallStructure({ ...callStructure, steps: updated });
-                            }}
-                            className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs"
-                          />
-                        </div>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {(about.cards || [
+                          { id: 'card-1', enabled: true, title: 'Absolute Accuracy', description: 'Every entry, ledger, and reconciliation is handled with precision to eliminate discrepancies and errors.' },
+                          { id: 'card-2', enabled: true, title: 'Save Time & Energy', description: 'Delegate tedious paperwork and financial tracking so you can focus entirely on core business operations.' },
+                          { id: 'card-3', enabled: true, title: 'Personalized Approach', description: 'Tailored financial packages and customized reporting that fit your unique business requirements.' },
+                        ]).map((card, idx) => (
+                          <div
+                            key={card.id || idx}
+                            className="p-4 rounded-2xl border border-slate-200 bg-slate-50/50 space-y-3 flex flex-col justify-between"
+                          >
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between">
+                                <span className="text-[11px] font-mono font-bold text-[#138354]">
+                                  Card #{idx + 1}
+                                </span>
+                                <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold text-slate-700">
+                                  <input
+                                    type="checkbox"
+                                    checked={card.enabled !== false}
+                                    onChange={(e) => {
+                                      const current = about.cards ? [...about.cards] : [];
+                                      current[idx] = { ...current[idx], enabled: e.target.checked };
+                                      setAbout({ ...about, cards: current });
+                                    }}
+                                    className="rounded text-[#138354]"
+                                  />
+                                  <span>Active</span>
+                                </label>
+                              </div>
+                              <input
+                                type="text"
+                                value={card.title}
+                                onChange={(e) => {
+                                  const current = about.cards ? [...about.cards] : [];
+                                  current[idx] = { ...current[idx], title: e.target.value };
+                                  setAbout({ ...about, cards: current });
+                                }}
+                                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-[#0f2c59]"
+                              />
+                              <textarea
+                                rows={3}
+                                value={card.description}
+                                onChange={(e) => {
+                                  const current = about.cards ? [...about.cards] : [];
+                                  current[idx] = { ...current[idx], description: e.target.value };
+                                  setAbout({ ...about, cards: current });
+                                }}
+                                className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-600"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const current = about.cards ? about.cards.filter((_, i) => i !== idx) : [];
+                                setAbout({ ...about, cards: current });
+                              }}
+                              className="text-red-500 hover:text-red-700 text-xs flex items-center gap-1 self-end font-medium"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Remove</span>
+                            </button>
+                          </div>
+                        ))}
                       </div>
+                    </div>
+                  </div>
+                )}
 
+                {/* SUB-TAB 2: WHY CHOOSE US */}
+                {subTabAboutWhyUs === 'whyUs' && (
+                  <div className="space-y-6">
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                       <div>
-                        <label className="block text-[11px] text-[#706E69]">Description</label>
-                        <textarea
-                          rows={2}
-                          value={step.description}
-                          onChange={(e) => {
-                            const updated = [...callStructure.steps];
-                            updated[idx] = { ...updated[idx], description: e.target.value };
-                            setCallStructure({ ...callStructure, steps: updated });
-                          }}
-                          className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs"
+                        <h4 className="text-sm font-semibold text-[#0f2c59]">Why Choose Us Visibility</h4>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Controls the Why Partner With Us section on the homepage.
+                        </p>
+                      </div>
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={whyUs.enabled !== false}
+                          onChange={(e) => setWhyUs({ ...whyUs, enabled: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#138354]"></div>
+                        <span className="text-xs font-bold text-slate-800">
+                          {whyUs.enabled !== false ? 'Section Visible' : 'Section Hidden'}
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Eyebrow Label
+                        </label>
+                        <input
+                          type="text"
+                          value={whyUs.eyebrow}
+                          onChange={(e) => setWhyUs({ ...whyUs, eyebrow: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Section Heading
+                        </label>
+                        <input
+                          type="text"
+                          value={whyUs.title}
+                          onChange={(e) => setWhyUs({ ...whyUs, title: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-[#0f2c59]"
                         />
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* BOOK & CHAPTERS TAB */}
-          {activeTab === 'book' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Eyebrow
-                  </label>
-                  <input
-                    type="text"
-                    value={book.eyebrow}
-                    onChange={(e) => setBook({ ...book, eyebrow: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Book Title
-                  </label>
-                  <input
-                    type="text"
-                    value={book.title}
-                    onChange={(e) => setBook({ ...book, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm font-semibold"
-                  />
-                </div>
-              </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Intro Description
+                      </label>
+                      <textarea
+                        rows={2}
+                        value={whyUs.description}
+                        onChange={(e) => setWhyUs({ ...whyUs, description: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm"
+                      />
+                    </div>
 
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                  Subtitle
-                </label>
-                <input
-                  type="text"
-                  value={book.subtitle}
-                  onChange={(e) => setBook({ ...book, subtitle: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                />
-              </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Call-to-Action Phone Box Heading
+                        </label>
+                        <input
+                          type="text"
+                          value={whyUs.ctaTitle || 'Ready for Stress-Free Accounting?'}
+                          onChange={(e) => setWhyUs({ ...whyUs, ctaTitle: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold text-slate-800"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Consultation Direct Phone Number
+                        </label>
+                        <input
+                          type="text"
+                          value={whyUs.ctaPhone || '9538913912'}
+                          onChange={(e) => setWhyUs({ ...whyUs, ctaPhone: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-mono font-bold"
+                        />
+                      </div>
+                    </div>
 
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                  Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={book.description}
-                  onChange={(e) => setBook({ ...book, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm leading-relaxed"
-                />
+                    {/* Benefits List */}
+                    <div className="space-y-4 pt-4 border-t border-slate-100">
+                      <h3 className="text-sm font-bold text-[#0f2c59]">Why Choose Us Key Reasons</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {(whyUs.reasons || []).map((reason, idx) => (
+                          <div key={idx} className="p-4 rounded-xl border border-slate-200 bg-slate-50 space-y-2">
+                            <span className="text-[11px] font-mono font-bold text-[#138354]">
+                              Benefit #{idx + 1}
+                            </span>
+                            <input
+                              type="text"
+                              value={reason.title}
+                              onChange={(e) => {
+                                const updated = [...whyUs.reasons];
+                                updated[idx] = { ...updated[idx], title: e.target.value };
+                                setWhyUs({ ...whyUs, reasons: updated });
+                              }}
+                              className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs font-bold text-[#0f2c59]"
+                            />
+                            <textarea
+                              rows={3}
+                              value={reason.description}
+                              onChange={(e) => {
+                                const updated = [...whyUs.reasons];
+                                updated[idx] = { ...updated[idx], description: e.target.value };
+                                setWhyUs({ ...whyUs, reasons: updated });
+                              }}
+                              className="w-full px-3 py-1.5 rounded-lg border border-slate-300 text-xs text-slate-600"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
+            )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-5 p-4 rounded-xl bg-[#FAF7F2] border border-[#E2DBD0]">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Price (INR ₹)
-                  </label>
-                  <input
-                    type="number"
-                    value={book.price}
-                    onChange={(e) => setBook({ ...book, price: Number(e.target.value) })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] bg-white text-sm font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Formats
-                  </label>
-                  <input
-                    type="text"
-                    value={book.format}
-                    onChange={(e) => setBook({ ...book, format: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] bg-white text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Compatibility
-                  </label>
-                  <input
-                    type="text"
-                    value={book.compatibility}
-                    onChange={(e) => setBook({ ...book, compatibility: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] bg-white text-sm"
-                  />
-                </div>
-              </div>
-
-              {/* Download File URLs */}
-              <div className="p-4 rounded-xl border border-[#E2DBD0] bg-white space-y-3">
-                <h4 className="text-xs font-mono uppercase tracking-wider text-[#706E69] font-bold">
-                  Protected Download Delivery URLs
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {/* ------------------------------------------------------------- */}
+            {/* CATEGORY 5: CONTACT & INQUIRY                                 */}
+            {/* ------------------------------------------------------------- */}
+            {activeCategory === 'contact' && (
+              <div className="space-y-6">
+                <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
                   <div>
-                    <label className="block text-[11px] text-[#706E69]">PDF Download URL</label>
+                    <h4 className="text-sm font-semibold text-[#0f2c59]">Contact Section Visibility</h4>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Toggle whether the Contact section is rendered on the homepage.
+                    </p>
+                  </div>
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={contactPage.enabled !== false}
+                      onChange={(e) => setContactPage({ ...contactPage, enabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#138354]"></div>
+                    <span className="text-xs font-bold text-slate-800">
+                      {contactPage.enabled !== false ? 'Section Visible' : 'Section Hidden'}
+                    </span>
+                  </label>
+                </div>
+
+                {/* Form Open / Paused switch */}
+                <div className="p-4 rounded-2xl bg-[#F4EFE6]/50 border border-[#E2DBD0] flex items-center justify-between">
+                  <div>
+                    <h4 className="text-sm font-bold text-[#0f2c59]">Online Inquiry Form Status</h4>
+                    <p className="text-xs text-slate-600 mt-0.5">
+                      When paused, the web form is disabled and instructs visitors to call or email directly.
+                    </p>
+                  </div>
+                  <label className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={contactPage.formEnabled}
+                      onChange={(e) => setContactPage({ ...contactPage, formEnabled: e.target.checked })}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#138354]"></div>
+                    <span className="text-xs font-bold text-slate-800">
+                      {contactPage.formEnabled ? 'Form Open' : 'Form Paused'}
+                    </span>
+                  </label>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Section Heading
+                    </label>
                     <input
                       type="text"
-                      placeholder="https://.../book.pdf"
-                      value={book.pdfUrl || ''}
-                      onChange={(e) => setBook({ ...book, pdfUrl: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] text-xs font-mono"
+                      value={contactPage.title}
+                      onChange={(e) => setContactPage({ ...contactPage, title: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-[#0f2c59]"
                     />
                   </div>
                   <div>
-                    <label className="block text-[11px] text-[#706E69]">EPUB Download URL</label>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Direct Support Email
+                    </label>
+                    <input
+                      type="email"
+                      value={contactPage.supportEmail}
+                      onChange={(e) => setContactPage({ ...contactPage, supportEmail: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Phone Number
+                    </label>
                     <input
                       type="text"
-                      placeholder="https://.../book.epub"
-                      value={book.epubUrl || ''}
-                      onChange={(e) => setBook({ ...book, epubUrl: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] text-xs font-mono"
+                      value={contactPage.phone || ''}
+                      onChange={(e) => setContactPage({ ...contactPage, phone: e.target.value })}
+                      placeholder="9538913912"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-mono font-bold"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Working Hours
+                    </label>
+                    <input
+                      type="text"
+                      value={contactPage.workingHours || ''}
+                      onChange={(e) => setContactPage({ ...contactPage, workingHours: e.target.value })}
+                      placeholder="Monday – Saturday: 9:00 AM – 6:00 PM"
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                    Subtitle Copy
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={contactPage.subtitle}
+                    onChange={(e) => setContactPage({ ...contactPage, subtitle: e.target.value })}
+                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Availability Notice
+                    </label>
+                    <input
+                      type="text"
+                      value={contactPage.availabilityNote}
+                      onChange={(e) => setContactPage({ ...contactPage, availabilityNote: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                      Direct Response Copy
+                    </label>
+                    <input
+                      type="text"
+                      value={contactPage.directCopy || ''}
+                      onChange={(e) => setContactPage({ ...contactPage, directCopy: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm"
                     />
                   </div>
                 </div>
               </div>
+            )}
 
-              {/* Book Chapters */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="text-sm font-semibold text-[#181918]">
-                    Table of Contents / Chapters ({book.chapters?.length || 0})
-                  </h3>
+            {/* ------------------------------------------------------------- */}
+            {/* CATEGORY 6: OTHER ACTIVE PAGES (SUBPAGES)                      */}
+            {/* ------------------------------------------------------------- */}
+            {activeCategory === 'otherPages' && (
+              <div className="space-y-6">
+                {/* Sub-tab pills */}
+                <div className="flex items-center gap-2 p-1 bg-slate-100 rounded-xl w-fit flex-wrap">
                   <button
                     type="button"
-                    onClick={() =>
-                      setBook({
-                        ...book,
-                        chapters: [
-                          ...(book.chapters || []),
-                          {
-                            id: `chap-${Date.now()}`,
-                            enabled: true,
-                            number: String((book.chapters?.length || 0) + 1),
-                            title: 'New Chapter',
-                            description: 'Chapter summary and core takeaway.',
-                          },
-                        ],
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 text-xs text-[#244634] font-semibold bg-[#EAF0EC] px-3 py-1.5 rounded-lg hover:bg-[#D8E6DB]"
+                    onClick={() => setSubTabOtherPages('aboutPage')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      subTabOtherPages === 'aboutPage'
+                        ? 'bg-white text-[#0f2c59] shadow-xs'
+                        : 'text-slate-600 hover:text-slate-800'
+                    }`}
                   >
-                    <Plus className="w-3.5 h-3.5" /> Add Chapter
+                    Dedicated About Page (/about)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubTabOtherPages('storePage')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      subTabOtherPages === 'storePage'
+                        ? 'bg-white text-[#0f2c59] shadow-xs'
+                        : 'text-slate-600 hover:text-slate-800'
+                    }`}
+                  >
+                    Dedicated Store Page (/store)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubTabOtherPages('book')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      subTabOtherPages === 'book'
+                        ? 'bg-white text-[#0f2c59] shadow-xs'
+                        : 'text-slate-600 hover:text-slate-800'
+                    }`}
+                  >
+                    The Book & Chapters (/book)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setSubTabOtherPages('communityPage')}
+                    className={`px-4 py-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      subTabOtherPages === 'communityPage'
+                        ? 'bg-white text-[#0f2c59] shadow-xs'
+                        : 'text-slate-600 hover:text-slate-800'
+                    }`}
+                  >
+                    Community Page (/community)
                   </button>
                 </div>
 
-                <div className="space-y-3">
-                  {book.chapters?.map((chap, idx) => (
-                    <div
-                      key={chap.id || idx}
-                      className="p-3.5 rounded-xl border border-[#E2DBD0] bg-[#FAF7F2] flex items-start gap-3"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={chap.enabled !== false}
-                        onChange={(e) => {
-                          const updated = [...(book.chapters || [])];
-                          updated[idx] = { ...updated[idx], enabled: e.target.checked };
-                          setBook({ ...book, chapters: updated });
-                        }}
-                        className="rounded text-[#244634] mt-2 w-4 h-4"
-                        title="Chapter active"
-                      />
+                {/* DEDICATED ABOUT PAGE */}
+                {subTabOtherPages === 'aboutPage' && (
+                  <div className="space-y-6">
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-semibold text-[#0f2c59]">Dedicated /about Page Visibility</h4>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          When disabled, visitors to /about see a graceful page-unavailable notice.
+                        </p>
+                      </div>
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={aboutPage.enabled !== false}
+                          onChange={(e) => setAboutPage({ ...aboutPage, enabled: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#138354]"></div>
+                        <span className="text-xs font-bold text-slate-800">
+                          {aboutPage.enabled !== false ? 'Page Active' : 'Page Disabled'}
+                        </span>
+                      </label>
+                    </div>
 
-                      <div className="flex-1 space-y-2">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={chap.number}
-                            onChange={(e) => {
-                              const updated = [...(book.chapters || [])];
-                              updated[idx] = { ...updated[idx], number: e.target.value };
-                              setBook({ ...book, chapters: updated });
-                            }}
-                            className="w-16 px-2 py-1 rounded border border-[#D8D1C5] bg-white text-xs font-mono"
-                            placeholder="Ch #"
-                          />
-                          <input
-                            type="text"
-                            value={chap.title}
-                            onChange={(e) => {
-                              const updated = [...(book.chapters || [])];
-                              updated[idx] = { ...updated[idx], title: e.target.value };
-                              setBook({ ...book, chapters: updated });
-                            }}
-                            className="flex-1 px-2.5 py-1 rounded border border-[#D8D1C5] bg-white text-xs font-medium"
-                            placeholder="Chapter Title"
-                          />
-                        </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Hero Eyebrow
+                        </label>
                         <input
                           type="text"
-                          value={chap.description}
-                          onChange={(e) => {
-                            const updated = [...(book.chapters || [])];
-                            updated[idx] = { ...updated[idx], description: e.target.value };
-                            setBook({ ...book, chapters: updated });
-                          }}
-                          className="w-full px-2.5 py-1 rounded border border-[#D8D1C5] bg-white text-xs"
-                          placeholder="Summary"
+                          value={aboutPage.hero.eyebrow}
+                          onChange={(e) =>
+                            setAboutPage({
+                              ...aboutPage,
+                              hero: { ...aboutPage.hero, eyebrow: e.target.value },
+                            })
+                          }
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm"
                         />
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = (book.chapters || []).filter((_, i) => i !== idx);
-                          setBook({ ...book, chapters: updated });
-                        }}
-                        className="text-red-600 hover:text-red-800 p-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Hero Headline
+                        </label>
+                        <input
+                          type="text"
+                          value={aboutPage.hero.title}
+                          onChange={(e) =>
+                            setAboutPage({
+                              ...aboutPage,
+                              hero: { ...aboutPage.hero, title: e.target.value },
+                            })
+                          }
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-[#0f2c59]"
+                        />
+                      </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
 
-          {/* STORE TAB */}
-          {activeTab === 'store' && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Eyebrow
-                  </label>
-                  <input
-                    type="text"
-                    value={store.eyebrow}
-                    onChange={(e) => setStore({ ...store, eyebrow: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    value={store.title}
-                    onChange={(e) => setStore({ ...store, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm font-semibold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                  Description
-                </label>
-                <textarea
-                  rows={2}
-                  value={store.description}
-                  onChange={(e) => setStore({ ...store, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                  Community Perk Note
-                </label>
-                <input
-                  type="text"
-                  value={store.communityNote}
-                  onChange={(e) => setStore({ ...store, communityNote: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* 1-ON-1 TAB */}
-          {activeTab === 'oneOnOne' && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Eyebrow
-                  </label>
-                  <input
-                    type="text"
-                    value={oneOnOne.eyebrow}
-                    onChange={(e) => setOneOnOne({ ...oneOnOne, eyebrow: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    value={oneOnOne.title}
-                    onChange={(e) => setOneOnOne({ ...oneOnOne, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm font-semibold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                  Description
-                </label>
-                <textarea
-                  rows={2}
-                  value={oneOnOne.description}
-                  onChange={(e) => setOneOnOne({ ...oneOnOne, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 p-4 rounded-xl bg-[#FAF7F2] border border-[#E2DBD0]">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Session Duration / Platform
-                  </label>
-                  <input
-                    type="text"
-                    value={oneOnOne.duration}
-                    onChange={(e) => setOneOnOne({ ...oneOnOne, duration: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] bg-white text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Button Label
-                  </label>
-                  <input
-                    type="text"
-                    value={oneOnOne.buttonText}
-                    onChange={(e) => setOneOnOne({ ...oneOnOne, buttonText: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] bg-white text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-2 font-semibold">
-                  Deliverables Checklist
-                </label>
-                <div className="space-y-2">
-                  {oneOnOne.deliverables?.map((deliv, idx) => (
-                    <div key={idx} className="flex items-center gap-2">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                        Story Heading
+                      </label>
                       <input
                         type="text"
-                        value={deliv}
-                        onChange={(e) => {
-                          const updated = [...oneOnOne.deliverables];
-                          updated[idx] = e.target.value;
-                          setOneOnOne({ ...oneOnOne, deliverables: updated });
-                        }}
-                        className="flex-1 px-3 py-1.5 rounded-lg border border-[#D8D1C5] text-xs"
+                        value={aboutPage.story.title}
+                        onChange={(e) =>
+                          setAboutPage({
+                            ...aboutPage,
+                            story: { ...aboutPage.story, title: e.target.value },
+                          })
+                        }
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-semibold"
                       />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = oneOnOne.deliverables.filter((_, i) => i !== idx);
-                          setOneOnOne({ ...oneOnOne, deliverables: updated });
-                        }}
-                        className="p-1.5 text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
                     </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setOneOnOne({
-                        ...oneOnOne,
-                        deliverables: [...oneOnOne.deliverables, 'New deliverable point'],
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 text-xs text-[#244634] font-semibold mt-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Deliverable
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ABOUT TAB */}
-          {activeTab === 'about' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Eyebrow
-                  </label>
-                  <input
-                    type="text"
-                    value={about.eyebrow}
-                    onChange={(e) => setAbout({ ...about, eyebrow: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Title
-                  </label>
-                  <input
-                    type="text"
-                    value={about.title}
-                    onChange={(e) => setAbout({ ...about, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm font-semibold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-2 font-semibold">
-                  Story Paragraphs
-                </label>
-                <div className="space-y-3">
-                  {about.paragraphs?.map((para, idx) => (
-                    <div key={idx} className="flex items-start gap-2">
-                      <textarea
-                        rows={2}
-                        value={para}
-                        onChange={(e) => {
-                          const updated = [...about.paragraphs];
-                          updated[idx] = e.target.value;
-                          setAbout({ ...about, paragraphs: updated });
-                        }}
-                        className="flex-1 px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm leading-relaxed"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = about.paragraphs.filter((_, i) => i !== idx);
-                          setAbout({ ...about, paragraphs: updated });
-                        }}
-                        className="p-2 text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAbout({
-                        ...about,
-                        paragraphs: [...about.paragraphs, 'New narrative paragraph.'],
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 text-xs text-[#244634] font-semibold"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Paragraph
-                  </button>
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#FAF7F2] border border-[#E2DBD0] space-y-4">
-                <h4 className="text-xs font-mono uppercase tracking-wider text-[#706E69] font-bold">
-                  Three Operating Priorities
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-[11px] text-[#706E69]">1st Priority Title</label>
-                    <input
-                      type="text"
-                      value={about.faithTitle}
-                      onChange={(e) => setAbout({ ...about, faithTitle: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs font-semibold"
-                    />
                   </div>
-                  <div>
-                    <label className="block text-[11px] text-[#706E69]">2nd Priority Title</label>
-                    <input
-                      type="text"
-                      value={about.familyTitle}
-                      onChange={(e) => setAbout({ ...about, familyTitle: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs font-semibold"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-[#706E69]">3rd Priority Title</label>
-                    <input
-                      type="text"
-                      value={about.businessTitle}
-                      onChange={(e) => setAbout({ ...about, businessTitle: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs font-semibold"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
+                )}
 
-          {/* FINAL CTA TAB */}
-          {activeTab === 'finalCta' && (
-            <div className="space-y-5">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Eyebrow
-                  </label>
-                  <input
-                    type="text"
-                    value={finalCta.eyebrow}
-                    onChange={(e) => setFinalCta({ ...finalCta, eyebrow: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Headline
-                  </label>
-                  <input
-                    type="text"
-                    value={finalCta.headline}
-                    onChange={(e) => setFinalCta({ ...finalCta, headline: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm font-semibold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                  Text Copy
-                </label>
-                <textarea
-                  rows={2}
-                  value={finalCta.text}
-                  onChange={(e) => setFinalCta({ ...finalCta, text: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Primary Button Label
-                  </label>
-                  <input
-                    type="text"
-                    value={finalCta.primaryButtonText}
-                    onChange={(e) =>
-                      setFinalCta({ ...finalCta, primaryButtonText: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Secondary Button Label
-                  </label>
-                  <input
-                    type="text"
-                    value={finalCta.secondaryButtonText}
-                    onChange={(e) =>
-                      setFinalCta({ ...finalCta, secondaryButtonText: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* WHY US TAB */}
-          {activeTab === 'whyUs' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Eyebrow Badge
-                  </label>
-                  <input
-                    type="text"
-                    value={whyUs.eyebrow}
-                    onChange={(e) => setWhyUs({ ...whyUs, eyebrow: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Section Heading
-                  </label>
-                  <input
-                    type="text"
-                    value={whyUs.title}
-                    onChange={(e) => setWhyUs({ ...whyUs, title: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm font-semibold"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                  Intro Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={whyUs.description}
-                  onChange={(e) => setWhyUs({ ...whyUs, description: e.target.value })}
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    CTA Box Title
-                  </label>
-                  <input
-                    type="text"
-                    value={whyUs.ctaTitle || ''}
-                    onChange={(e) => setWhyUs({ ...whyUs, ctaTitle: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    CTA Phone Number
-                  </label>
-                  <input
-                    type="text"
-                    value={whyUs.ctaPhone || ''}
-                    onChange={(e) => setWhyUs({ ...whyUs, ctaPhone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm font-mono"
-                  />
-                </div>
-              </div>
-
-              <div className="p-4 rounded-xl bg-[#FAF7F2] border border-[#E2DBD0] space-y-4">
-                <h4 className="text-xs font-mono uppercase tracking-wider text-[#706E69] font-bold">
-                  Key Value Pillars & Reasons ({whyUs.reasons?.length || 0})
-                </h4>
-                {whyUs.reasons?.map((reason, idx) => (
-                  <div key={idx} className="p-3 bg-white rounded-lg border border-[#E2DBD0] space-y-2">
-                    <input
-                      type="text"
-                      value={reason.title}
-                      placeholder="Reason Title"
-                      onChange={(e) => {
-                        const newReasons = [...whyUs.reasons];
-                        newReasons[idx] = { ...newReasons[idx], title: e.target.value };
-                        setWhyUs({ ...whyUs, reasons: newReasons });
-                      }}
-                      className="w-full px-2.5 py-1.5 text-xs font-semibold rounded border border-[#D8D1C5]"
-                    />
-                    <textarea
-                      rows={2}
-                      value={reason.description}
-                      placeholder="Reason Description"
-                      onChange={(e) => {
-                        const newReasons = [...whyUs.reasons];
-                        newReasons[idx] = { ...newReasons[idx], description: e.target.value };
-                        setWhyUs({ ...whyUs, reasons: newReasons });
-                      }}
-                      className="w-full px-2.5 py-1.5 text-xs rounded border border-[#D8D1C5]"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* COMMUNITY PAGE TAB */}
-          {activeTab === 'communityPage' && (
-            <div className="space-y-6">
-              <div className="p-4 rounded-xl bg-[#FAF7F2] border border-[#E2DBD0] space-y-3">
-                <h4 className="text-xs font-mono uppercase tracking-wider text-[#706E69] font-bold">
-                  Community Hero & Schedule
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-[11px] text-[#706E69]">Title</label>
-                    <input
-                      type="text"
-                      value={communityPage.hero.title}
-                      onChange={(e) =>
-                        setCommunityPage({
-                          ...communityPage,
-                          hero: { ...communityPage.hero, title: e.target.value },
-                        })
-                      }
-                      className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] text-[#706E69]">Subtitle</label>
-                    <input
-                      type="text"
-                      value={communityPage.hero.subtitle}
-                      onChange={(e) =>
-                        setCommunityPage({
-                          ...communityPage,
-                          hero: { ...communityPage.hero, subtitle: e.target.value },
-                        })
-                      }
-                      className="w-full px-2.5 py-1.5 rounded border border-[#D8D1C5] bg-white text-xs"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <h4 className="text-xs font-mono uppercase tracking-wider text-[#706E69] font-bold mb-3">
-                  Benefits ({communityPage.benefits?.items?.length || 0})
-                </h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {communityPage.benefits?.items?.map((item, idx) => (
-                    <div
-                      key={item.id || idx}
-                      className="p-3 rounded-lg border border-[#E2DBD0] bg-white flex items-start gap-2"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={item.enabled !== false}
-                        onChange={(e) => {
-                          const updated = [...communityPage.benefits.items];
-                          updated[idx] = { ...updated[idx], enabled: e.target.checked };
-                          setCommunityPage({
-                            ...communityPage,
-                            benefits: { ...communityPage.benefits, items: updated },
-                          });
-                        }}
-                        className="rounded text-[#244634] mt-1 w-4 h-4"
-                      />
-                      <div className="flex-1">
+                {/* DEDICATED STORE PAGE */}
+                {subTabOtherPages === 'storePage' && (
+                  <div className="space-y-6">
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-semibold text-[#0f2c59]">Dedicated /store Page Visibility</h4>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          When disabled, /store displays an inactive notice without deleting products.
+                        </p>
+                      </div>
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
                         <input
-                          type="text"
-                          value={item.title}
-                          onChange={(e) => {
-                            const updated = [...communityPage.benefits.items];
-                            updated[idx] = { ...updated[idx], title: e.target.value };
-                            setCommunityPage({
-                              ...communityPage,
-                              benefits: { ...communityPage.benefits, items: updated },
-                            });
-                          }}
-                          className="w-full px-2 py-1 rounded border border-[#D8D1C5] text-xs font-medium"
+                          type="checkbox"
+                          checked={storePage.enabled !== false}
+                          onChange={(e) => setStorePage({ ...storePage, enabled: e.target.checked })}
+                          className="sr-only peer"
                         />
+                        <div className="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#138354]"></div>
+                        <span className="text-xs font-bold text-slate-800">
+                          {storePage.enabled !== false ? 'Page Active' : 'Page Disabled'}
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Catalog Heading
+                        </label>
                         <input
                           type="text"
-                          value={item.description}
-                          onChange={(e) => {
-                            const updated = [...communityPage.benefits.items];
-                            updated[idx] = { ...updated[idx], description: e.target.value };
-                            setCommunityPage({
-                              ...communityPage,
-                              benefits: { ...communityPage.benefits, items: updated },
-                            });
-                          }}
-                          className="w-full px-2 py-1 rounded border border-[#D8D1C5] text-[11px] text-[#5C5E5B] mt-1"
+                          value={storePage.title}
+                          onChange={(e) => setStorePage({ ...storePage, title: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-[#0f2c59]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={storePage.subtitle}
+                          onChange={(e) => setStorePage({ ...storePage, subtitle: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm"
                         />
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
+                  </div>
+                )}
 
-          {/* ABOUT PAGE TAB */}
-          {activeTab === 'aboutPage' && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Hero Eyebrow
-                  </label>
-                  <input
-                    type="text"
-                    value={aboutPage.hero.eyebrow}
-                    onChange={(e) =>
-                      setAboutPage({
-                        ...aboutPage,
-                        hero: { ...aboutPage.hero, eyebrow: e.target.value },
-                      })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Hero Title
-                  </label>
-                  <input
-                    type="text"
-                    value={aboutPage.hero.title}
-                    onChange={(e) =>
-                      setAboutPage({
-                        ...aboutPage,
-                        hero: { ...aboutPage.hero, title: e.target.value },
-                      })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-2 font-semibold">
-                  Story Paragraphs
-                </label>
-                <div className="space-y-3">
-                  {aboutPage.story.paragraphs.map((p, idx) => (
-                    <div key={idx} className="flex items-start gap-2">
-                      <textarea
-                        rows={2}
-                        value={p}
-                        onChange={(e) => {
-                          const updated = [...aboutPage.story.paragraphs];
-                          updated[idx] = e.target.value;
-                          setAboutPage({
-                            ...aboutPage,
-                            story: { ...aboutPage.story, paragraphs: updated },
-                          });
-                        }}
-                        className="flex-1 px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const updated = aboutPage.story.paragraphs.filter(
-                            (_, i) => i !== idx
-                          );
-                          setAboutPage({
-                            ...aboutPage,
-                            story: { ...aboutPage.story, paragraphs: updated },
-                          });
-                        }}
-                        className="p-2 text-red-600 hover:text-red-800"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                {/* THE BOOK */}
+                {subTabOtherPages === 'book' && (
+                  <div className="space-y-6">
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-semibold text-[#0f2c59]">Book Section & Route Visibility</h4>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Controls public visibility of the Book page and homepage promo.
+                        </p>
+                      </div>
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={book.enabled !== false}
+                          onChange={(e) => setBook({ ...book, enabled: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#138354]"></div>
+                        <span className="text-xs font-bold text-slate-800">
+                          {book.enabled !== false ? 'Active' : 'Disabled'}
+                        </span>
+                      </label>
                     </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setAboutPage({
-                        ...aboutPage,
-                        story: {
-                          ...aboutPage.story,
-                          paragraphs: [...aboutPage.story.paragraphs, 'New story narrative.'],
-                        },
-                      })
-                    }
-                    className="inline-flex items-center gap-1.5 text-xs text-[#244634] font-semibold"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add Story Paragraph
-                  </button>
-                </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Book Title
+                        </label>
+                        <input
+                          type="text"
+                          value={book.title}
+                          onChange={(e) => setBook({ ...book, title: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-[#0f2c59]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={book.subtitle}
+                          onChange={(e) => setBook({ ...book, subtitle: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* COMMUNITY PAGE */}
+                {subTabOtherPages === 'communityPage' && (
+                  <div className="space-y-6">
+                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-semibold text-[#0f2c59]">Community Page Visibility</h4>
+                        <p className="text-xs text-slate-500 mt-0.5">
+                          Controls the public /community route visibility.
+                        </p>
+                      </div>
+                      <label className="inline-flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={communityPage.enabled !== false}
+                          onChange={(e) => setCommunityPage({ ...communityPage, enabled: e.target.checked })}
+                          className="sr-only peer"
+                        />
+                        <div className="w-11 h-6 bg-slate-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#138354]"></div>
+                        <span className="text-xs font-bold text-slate-800">
+                          {communityPage.enabled !== false ? 'Active' : 'Disabled'}
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Community Hero Title
+                        </label>
+                        <input
+                          type="text"
+                          value={communityPage.hero.title}
+                          onChange={(e) =>
+                            setCommunityPage({
+                              ...communityPage,
+                              hero: { ...communityPage.hero, title: e.target.value },
+                            })
+                          }
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-[#0f2c59]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                          Hero Subtitle
+                        </label>
+                        <input
+                          type="text"
+                          value={communityPage.hero.subtitle}
+                          onChange={(e) =>
+                            setCommunityPage({
+                              ...communityPage,
+                              hero: { ...communityPage.hero, subtitle: e.target.value },
+                            })
+                          }
+                          className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-
-          {/* CONTACT PAGE TAB */}
-          {activeTab === 'contactPage' && (
-            <div className="space-y-6">
-              <div className="p-4 rounded-xl bg-[#FAF7F2] border border-[#E2DBD0] flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-semibold text-[#181918]">
-                    Contact Form Availability
-                  </h4>
-                  <p className="text-xs text-[#5C5E5B] mt-0.5">
-                    When disabled, the public contact page hides the form and instructs users to email directly.
-                  </p>
-                </div>
-                <label className="inline-flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={contactPage.formEnabled}
-                    onChange={(e) =>
-                      setContactPage({ ...contactPage, formEnabled: e.target.checked })
-                    }
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#244634]"></div>
-                  <span className="text-xs font-semibold text-[#181918]">
-                    {contactPage.formEnabled ? 'Form Open' : 'Form Paused'}
-                  </span>
-                </label>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Page Title
-                  </label>
-                  <input
-                    type="text"
-                    value={contactPage.title}
-                    onChange={(e) =>
-                      setContactPage({ ...contactPage, title: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Direct Support Email
-                  </label>
-                  <input
-                    type="email"
-                    value={contactPage.supportEmail}
-                    onChange={(e) =>
-                      setContactPage({ ...contactPage, supportEmail: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                  Subtitle Copy
-                </label>
-                <textarea
-                  rows={2}
-                  value={contactPage.subtitle}
-                  onChange={(e) =>
-                    setContactPage({ ...contactPage, subtitle: e.target.value })
-                  }
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                  Availability Notice
-                </label>
-                <input
-                  type="text"
-                  value={contactPage.availabilityNote}
-                  onChange={(e) =>
-                    setContactPage({ ...contactPage, availabilityNote: e.target.value })
-                  }
-                  className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                />
-              </div>
-            </div>
-          )}
-
-          {/* STORE PAGE TAB */}
-          {activeTab === 'storePage' && (
-            <div className="space-y-6">
-              <div className="p-4 rounded-xl bg-[#FAF7F2] border border-[#E2DBD0] flex items-center justify-between">
-                <div>
-                  <h4 className="text-sm font-semibold text-[#181918]">
-                    Community Recommendation Banner
-                  </h4>
-                  <p className="text-xs text-[#5C5E5B] mt-0.5">
-                    Controls the banner advising shoppers that all templates are included free with community membership.
-                  </p>
-                </div>
-                <label className="inline-flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={storePage.communityPromoEnabled}
-                    onChange={(e) =>
-                      setStorePage({
-                        ...storePage,
-                        communityPromoEnabled: e.target.checked,
-                      })
-                    }
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-300 peer-focus:outline-hidden rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#244634]"></div>
-                  <span className="text-xs font-semibold text-[#181918]">
-                    {storePage.communityPromoEnabled ? 'Enabled' : 'Disabled'}
-                  </span>
-                </label>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Page Title
-                  </label>
-                  <input
-                    type="text"
-                    value={storePage.title}
-                    onChange={(e) =>
-                      setStorePage({ ...storePage, title: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm font-semibold"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-mono uppercase tracking-wider text-[#706E69] mb-1 font-semibold">
-                    Subtitle
-                  </label>
-                  <input
-                    type="text"
-                    value={storePage.subtitle}
-                    onChange={(e) =>
-                      setStorePage({ ...storePage, subtitle: e.target.value })
-                    }
-                    className="w-full px-3 py-2 rounded-lg border border-[#D8D1C5] text-sm"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Editor Bottom Save Bar */}
-        <div className="p-4 sm:p-6 border-t border-[#E8E2D7] bg-[#FAF7F2]/60 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-[#706E69]">
-            <Info className="w-4 h-4 text-[#244634]" />
-            <span>
-              Changes save directly to Firestore <code>site_content/{activeTab}</code> and update in realtime.
-            </span>
-          </div>
-
-          <button
-            onClick={handleSaveCurrentSection}
-            disabled={saving || loading}
-            className="inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-[#244634] rounded-xl hover:bg-[#1E3B2C] disabled:opacity-50 transition-colors shadow-xs"
-          >
-            {saving ? (
-              <RefreshCw className="w-4 h-4 animate-spin" />
-            ) : (
-              <Save className="w-4 h-4" />
             )}
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

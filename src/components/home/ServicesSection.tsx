@@ -76,7 +76,7 @@ export function ServicesSection({ content, enabled = true }: ServicesSectionProp
   }
 
   return (
-    <section id="services" className="py-20 bg-[#f8fafc] border-b border-slate-200">
+    <section id="services" className="py-20 bg-[#f8fafc] border-b border-slate-200 scroll-mt-24 sm:scroll-mt-28">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="text-xs font-semibold text-[#138354] uppercase tracking-widest inline-block bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">

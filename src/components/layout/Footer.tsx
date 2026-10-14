@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Mail, ArrowUpRight, Globe } from 'lucide-react';
-import { useSocialSettings, useContactSettings, useDynamicPricing } from '@/lib/firebase/content';
+import { useSocialSettings, useContactSettings, useDynamicPricing, useProfilePhoto, DEFAULT_PROFILE_IMAGE } from '@/lib/firebase/content';
 import { useCurrency } from '@/lib/context/CurrencyContext';
 import { CurrencySelector } from './CurrencySelector';
 import { ConnectionInfoModal } from './ConnectionInfoModal';
@@ -24,12 +24,17 @@ function LinkedinIcon({ className }: { className?: string }) {
   );
 }
 
-export function Footer() {
+interface FooterProps {
+  profileImageUrl?: string;
+}
+
+export function Footer({ profileImageUrl }: FooterProps = {}) {
   const { youtubeUrl, linkedinUrl } = useSocialSettings();
   const { supportEmail } = useContactSettings();
   const pricing = useDynamicPricing();
   const { formatPrice, isIpDisplayEnabled } = useCurrency();
   const [isConnectionModalOpen, setIsConnectionModalOpen] = useState(false);
+  const liveProfileImage = useProfilePhoto(profileImageUrl);
 
   const activeEmail = supportEmail || 'cageethanofficial@gmail.com';
 
@@ -42,9 +47,15 @@ export function Footer() {
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full overflow-hidden border border-emerald-500/50 shadow-inner flex-shrink-0">
                 <img
-                  src="https://lh3.googleusercontent.com/gg/AJWXcNc5cFZUdc92Hgns-UUZuRCxQf45gOAiCPRspBVSwOxCVcfEYcsdaPP7rAveA9hbc3jpIfNmlut7sA62tE4LRqKaRzVheSAEiH8dWJOP_EW3N53PIJlvf5SKh6bWKlM607xVHSN9jjV6zjlQrp2tK06iHMWw9HeRSqoYikRWMrWH5zEVpZKtrpaSies_kLBWxmfTic87YfLyTYPi3HoqfknTjTwYRLKROmWzhWy_4ZZazdjKWt4jxTPm_q58n0vPkrEXTE6IJYTJKEkmFcqoApcdvQk0UBSaxk8=s0"
+                  src={liveProfileImage}
                   alt="Geetha N."
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover object-center"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    if (target.src !== DEFAULT_PROFILE_IMAGE && !target.src.endsWith(DEFAULT_PROFILE_IMAGE)) {
+                      target.src = DEFAULT_PROFILE_IMAGE;
+                    }
+                  }}
                 />
               </div>
               <div>

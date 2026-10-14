@@ -17,12 +17,17 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { useUserAuth } from '@/lib/firebase/user-auth';
-import { useDynamicPricing } from '@/lib/firebase/content';
+import { useDynamicPricing, useProfilePhoto, useBranding, BrandingContent, DEFAULT_PROFILE_IMAGE } from '@/lib/firebase/content';
 import { CurrencySelector } from './CurrencySelector';
 import { useCurrency } from '@/lib/context/CurrencyContext';
 
+import { DEFAULT_NAVIGATION_CONFIG, NavigationConfig } from '@/lib/config/navigation';
+
 interface NavbarProps {
   onOpenCommunityCheckout?: () => void;
+  profileImageUrl?: string;
+  config?: Partial<NavigationConfig>;
+  branding?: BrandingContent;
 }
 
 const emptySubscribe = () => () => {};
@@ -34,8 +39,28 @@ function useMounted(): boolean {
   );
 }
 
-export function Navbar({ onOpenCommunityCheckout }: NavbarProps = {}) {
+export function Navbar({ onOpenCommunityCheckout, profileImageUrl, config: customConfig, branding }: NavbarProps = {}) {
   void onOpenCommunityCheckout;
+  const navConfig = { ...DEFAULT_NAVIGATION_CONFIG, ...customConfig };
+  const showMore = navConfig.showMore;
+  const liveProfileImage = useProfilePhoto(profileImageUrl);
+  const liveBranding = useBranding(branding);
+
+  const businessName = liveBranding.businessName || 'Finance with Geetha';
+  const tagline = liveBranding.tagline || 'Bookkeeping & Accounting';
+  const logoUrl = liveBranding.logoUrl || liveProfileImage || DEFAULT_PROFILE_IMAGE;
+  const showLogo = liveBranding.showLogo !== false;
+  const showBusinessName = liveBranding.showBusinessName !== false;
+  const showTagline = liveBranding.showTagline !== false;
+  const logoSize = liveBranding.logoSize || 'medium';
+
+  const logoSizeClass =
+    logoSize === 'small'
+      ? 'w-8 h-8 sm:w-9 sm:h-9'
+      : logoSize === 'large'
+      ? 'w-11 h-11 sm:w-12 sm:h-12'
+      : 'w-9 h-9 sm:w-10 sm:h-10';
+
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMoreOpen, setIsMoreOpen] = useState(false);
@@ -101,10 +126,10 @@ export function Navbar({ onOpenCommunityCheckout }: NavbarProps = {}) {
 
   // Primary navigation links for desktop
   const primaryLinks = [
-    { label: 'About', href: '/#about' },
-    { label: 'Services', href: '/#services' },
-    { label: 'Why Us', href: '/#why-us' },
-    { label: 'Contact', href: '/#contact' },
+    ...(navConfig.showAbout ? [{ label: 'About', href: '/#about' }] : []),
+    ...(navConfig.showServices ? [{ label: 'Services', href: '/#services' }] : []),
+    ...(navConfig.showWhyUs ? [{ label: 'Why Us', href: '/#why-us' }] : []),
+    ...(navConfig.showContact ? [{ label: 'Contact', href: '/#contact' }] : []),
   ];
 
   // Smooth scroll handler for hash links on the homepage
@@ -118,7 +143,10 @@ export function Navbar({ onOpenCommunityCheckout }: NavbarProps = {}) {
         e.preventDefault();
         const element = document.getElementById(targetId);
         if (element) {
-          element.scrollIntoView({ behavior: 'smooth' });
+          const prefersReduced =
+            typeof window !== 'undefined' &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+          element.scrollIntoView({ behavior: prefersReduced ? 'auto' : 'smooth' });
           window.history.pushState(null, '', `/#${targetId}`);
         }
       }
@@ -169,23 +197,37 @@ export function Navbar({ onOpenCommunityCheckout }: NavbarProps = {}) {
             <Link
               href="/"
               className="group flex items-center gap-2.5 sm:gap-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#138354] rounded-lg flex-shrink-0 whitespace-nowrap"
-              aria-label="Finance with Geetha - Home"
+              aria-label={`${businessName} - Home`}
             >
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-[#0f2c59] shadow-inner bg-slate-100 flex-shrink-0">
-                <img
-                  src="https://lh3.googleusercontent.com/gg/AJWXcNc5cFZUdc92Hgns-UUZuRCxQf45gOAiCPRspBVSwOxCVcfEYcsdaPP7rAveA9hbc3jpIfNmlut7sA62tE4LRqKaRzVheSAEiH8dWJOP_EW3N53PIJlvf5SKh6bWKlM607xVHSN9jjV6zjlQrp2tK06iHMWw9HeRSqoYikRWMrWH5zEVpZKtrpaSies_kLBWxmfTic87YfLyTYPi3HoqfknTjTwYRLKROmWzhWy_4ZZazdjKWt4jxTPm_q58n0vPkrEXTE6IJYTJKEkmFcqoApcdvQk0UBSaxk8=s0"
-                  alt="Geetha N."
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-serif text-base sm:text-lg lg:text-xl font-bold tracking-tight text-[#0f2c59] group-hover:text-[#138354] transition-colors leading-tight">
-                  Finance with Geetha
-                </span>
-                <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-[#138354] leading-none">
-                  Bookkeeping & Accounting
-                </span>
-              </div>
+              {showLogo && (
+                <div className={`${logoSizeClass} rounded-full overflow-hidden border-2 border-[#0f2c59] shadow-inner bg-slate-100 flex-shrink-0`}>
+                  <img
+                    src={logoUrl}
+                    alt={businessName}
+                    className="w-full h-full object-cover object-center"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      if (target.src !== DEFAULT_PROFILE_IMAGE && !target.src.endsWith(DEFAULT_PROFILE_IMAGE)) {
+                        target.src = DEFAULT_PROFILE_IMAGE;
+                      }
+                    }}
+                  />
+                </div>
+              )}
+              {(showBusinessName || showTagline) && (
+                <div className="flex flex-col">
+                  {showBusinessName && (
+                    <span className="font-serif text-base sm:text-lg lg:text-xl font-bold tracking-tight text-[#0f2c59] group-hover:text-[#138354] transition-colors leading-tight">
+                      {businessName}
+                    </span>
+                  )}
+                  {showTagline && (
+                    <span className="text-[10px] sm:text-[11px] font-semibold uppercase tracking-wider text-[#138354] leading-none">
+                      {tagline}
+                    </span>
+                  )}
+                </div>
+              )}
             </Link>
 
             {/* 2. Desktop Primary Navigation */}
@@ -208,70 +250,72 @@ export function Navbar({ onOpenCommunityCheckout }: NavbarProps = {}) {
                 );
               })}
 
-              {/* 3. More Dropdown (Community, Book, Store) */}
-              <div className="relative" ref={moreDropdownRef}>
-                <button
-                  type="button"
-                  onClick={() => setIsMoreOpen(!isMoreOpen)}
-                  aria-expanded={isMoreOpen}
-                  aria-haspopup="true"
-                  className={`flex items-center gap-1 text-xs xl:text-sm font-medium transition-colors hover:text-[#0f2c59] whitespace-nowrap py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#138354] rounded-md ${
-                    isMoreActive
-                      ? 'text-[#0f2c59] font-bold border-b-2 border-[#138354]'
-                      : 'text-slate-600'
-                  }`}
-                >
-                  <span>More</span>
-                  <ChevronDown
-                    className={`w-3.5 h-3.5 transition-transform duration-200 ${
-                      isMoreOpen ? 'rotate-180 text-[#0f2c59]' : 'text-slate-400'
+              {/* 3. More Dropdown (Community, Book, Store) - Hidden by default */}
+              {showMore && (
+                <div className="relative" ref={moreDropdownRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsMoreOpen(!isMoreOpen)}
+                    aria-expanded={isMoreOpen}
+                    aria-haspopup="true"
+                    className={`flex items-center gap-1 text-xs xl:text-sm font-medium transition-colors hover:text-[#0f2c59] whitespace-nowrap py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#138354] rounded-md ${
+                      isMoreActive
+                        ? 'text-[#0f2c59] font-bold border-b-2 border-[#138354]'
+                        : 'text-slate-600'
                     }`}
-                  />
-                </button>
+                  >
+                    <span>More</span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                        isMoreOpen ? 'rotate-180 text-[#0f2c59]' : 'text-slate-400'
+                      }`}
+                    />
+                  </button>
 
-                {isMoreOpen && (
-                  <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                    <div className="px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold border-b border-slate-100 mb-1">
-                      Explore Resources
-                    </div>
-                    {moreLinks.map((item) => {
-                      const Icon = item.icon;
-                      const isItemActive = pathname === item.href;
-                      return (
-                        <Link
-                          key={item.label}
-                          href={item.href}
-                          onClick={() => setIsMoreOpen(false)}
-                          className={`flex items-start gap-3 p-2.5 rounded-xl transition-colors ${
-                            isItemActive
-                              ? 'bg-emerald-50 text-[#0f2c59]'
-                              : 'hover:bg-slate-50 text-slate-700'
-                          }`}
-                        >
-                          <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[#138354] flex-shrink-0 mt-0.5">
-                            <Icon className="w-4 h-4" />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center justify-between">
-                              <span className="font-semibold text-xs sm:text-sm text-slate-900">
-                                {item.label}
-                              </span>
-                              {item.price && (
-                                <span className="text-[10px] font-mono text-[#138354] bg-emerald-50 px-1.5 py-0.5 rounded font-semibold">
-                                  {item.price}
-                                </span>
-                              )}
+                  {isMoreOpen && (
+                    <div className="absolute top-full left-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2 z-50 animate-in fade-in zoom-in-95 duration-150">
+                      <div className="px-3 py-1.5 text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold border-b border-slate-100 mb-1">
+                        Explore Resources
+                      </div>
+                      {moreLinks.map((item) => {
+                        const Icon = item.icon;
+                        const isItemActive = pathname === item.href;
+                        return (
+                          <Link
+                            key={item.label}
+                            href={item.href}
+                            onClick={() => setIsMoreOpen(false)}
+                            className={`flex items-start gap-3 p-2.5 rounded-xl transition-colors ${
+                              isItemActive
+                                ? 'bg-emerald-50 text-[#0f2c59]'
+                                : 'hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[#138354] flex-shrink-0 mt-0.5">
+                              <Icon className="w-4 h-4" />
                             </div>
-                            <p className="text-[11px] text-slate-500 leading-tight mt-0.5 truncate">
-                              {item.description}
-                            </p>
-                          </div>
-                        </Link>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between">
+                                <span className="font-semibold text-xs sm:text-sm text-slate-900">
+                                  {item.label}
+                                </span>
+                                {item.price && (
+                                  <span className="text-[10px] font-mono text-[#138354] bg-emerald-50 px-1.5 py-0.5 rounded font-semibold">
+                                    {item.price}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-500 leading-tight mt-0.5 truncate">
+                                {item.description}
+                              </p>
+                            </div>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </nav>
 
             {/* 4. Desktop Right Action Items */}
@@ -421,35 +465,37 @@ export function Navbar({ onOpenCommunityCheckout }: NavbarProps = {}) {
               </nav>
             </div>
 
-            {/* Extended Resources (Community, Book, Store) */}
-            <div className="space-y-1 pt-2 border-t border-slate-100">
-              <div className="px-3 py-1 text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
-                Resources & Store
+            {/* Extended Resources (Community, Book, Store) - Hidden by default */}
+            {showMore && (
+              <div className="space-y-1 pt-2 border-t border-slate-100">
+                <div className="px-3 py-1 text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
+                  Resources & Store
+                </div>
+                <nav className="flex flex-col space-y-1">
+                  {moreLinks.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.label}
+                        href={item.href}
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <Icon className="w-4 h-4 text-[#138354]" />
+                          <span>{item.label}</span>
+                        </div>
+                        {item.price && (
+                          <span className="text-xs font-mono font-bold text-[#138354]">
+                            {item.price}
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </nav>
               </div>
-              <nav className="flex flex-col space-y-1">
-                {moreLinks.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.label}
-                      href={item.href}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className="flex items-center justify-between px-3 py-2 rounded-xl text-sm font-semibold text-slate-800 hover:bg-slate-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-2.5">
-                        <Icon className="w-4 h-4 text-[#138354]" />
-                        <span>{item.label}</span>
-                      </div>
-                      {item.price && (
-                        <span className="text-xs font-mono font-bold text-[#138354]">
-                          {item.price}
-                        </span>
-                      )}
-                    </Link>
-                  );
-                })}
-              </nav>
-            </div>
+            )}
 
             {/* Direct Calls & Consultation Action */}
             <div className="pt-2 border-t border-slate-100 space-y-2.5">
@@ -523,7 +569,7 @@ export function Navbar({ onOpenCommunityCheckout }: NavbarProps = {}) {
             </div>
 
             <div className="pt-2 text-center text-xs text-slate-500">
-              Finance with Geetha · Professional Bookkeeping & Accounting
+              {businessName} · {tagline}
             </div>
           </div>
         </div>

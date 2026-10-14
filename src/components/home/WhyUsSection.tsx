@@ -38,7 +38,7 @@ export function WhyUsSection({ content, enabled = true }: WhyUsSectionProps) {
   const ctaPhone = content?.ctaPhone || '9538913912';
 
   return (
-    <section id="why-us" className="py-20 bg-[#0f2c59] text-white">
+    <section id="why-us" className="py-20 bg-[#0f2c59] text-white scroll-mt-24 sm:scroll-mt-28">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           {/* Left Column: Why Partner With Us */}

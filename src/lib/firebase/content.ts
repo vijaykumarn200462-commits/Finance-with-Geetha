@@ -1,6 +1,7 @@
 'use client';
 
 export * from './content-defaults';
+import { DEFAULT_PROFILE_IMAGE } from './content-defaults';
 
 import { useState, useEffect, useMemo } from 'react';
 import { db } from './client';
@@ -31,7 +32,10 @@ import {
   AboutPageContent,
   ContactPageContent,
   StorePageContent,
+  WhyUsContent,
+  BrandingContent,
 } from '@/types/site-content';
+import { DEFAULT_BRANDING_CONTENT } from './content-defaults';
 import { SocialSettings, ContactSettings } from '@/types/settings';
 import {
   BUSINESS_STATS,
@@ -76,10 +80,11 @@ export const DEFAULT_HERO_CONTENT: HeroContent = {
   credibilityAuthor: 'Geetha, Founder of Finance with Geetha',
   primaryButtonText: 'Join the Community',
   secondaryButtonText: 'Start with the Book — ₹29',
+  profileImageUrl: DEFAULT_PROFILE_IMAGE,
 };
 
 export const DEFAULT_STATS_CONTENT: StatsContent = {
-  enabled: true,
+  enabled: false,
   eyebrow: 'The Track Record',
   title: 'Real business. Real numbers.',
   subtitle: 'Not projections. My actual business.',
@@ -153,7 +158,7 @@ export const DEFAULT_BOOK_SECTION_CONTENT: BookSectionContent = {
 };
 
 export const DEFAULT_STORE_SECTION_CONTENT: StoreSectionContent = {
-  enabled: true,
+  enabled: false,
   eyebrow: 'Plug & Play Operations',
   title: 'Templates & Cheat Sheets',
   description:
@@ -180,7 +185,7 @@ export const DEFAULT_ONE_ON_ONE_CONTENT: OneOnOneContent = {
 };
 
 export const DEFAULT_ABOUT_CONTENT: AboutContent = {
-  enabled: true,
+  enabled: false,
   eyebrow: 'Founder & Working Professional',
   title: "Hi, I'm Geetha.",
   subtitle: 'Firm owner, mentor, and coach.',
@@ -390,6 +395,7 @@ export const DEFAULT_SITE_CONTENT = {
   contactPage: DEFAULT_CONTACT_PAGE_CONTENT,
   storePage: DEFAULT_STORE_PAGE_CONTENT,
   whyUs: DEFAULT_WHY_US_CONTENT,
+  branding: DEFAULT_BRANDING_CONTENT,
 };
 
 // ==========================================
@@ -791,3 +797,85 @@ export async function fetchSectionContent<T>(section: string, fallback: T): Prom
     return fallback;
   }
 }
+
+/**
+ * Hook for reading Geetha's profile photo in realtime from site_content/hero.
+ * Falls back to initialUrl or DEFAULT_PROFILE_IMAGE.
+ */
+export function useProfilePhoto(initialUrl?: string): string {
+  const [imageUrl, setImageUrl] = useState<string>(initialUrl || DEFAULT_PROFILE_IMAGE);
+
+  useEffect(() => {
+    try {
+      const docRef = doc(db, COLLECTIONS.SITE_CONTENT, 'hero');
+      const unsubscribe = onSnapshot(
+        docRef,
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data();
+            const photo = data?.profileImageUrl;
+            if (photo && typeof photo === 'string' && photo.trim()) {
+              setImageUrl(photo.trim());
+              return;
+            }
+          }
+          if (initialUrl && initialUrl.trim()) {
+            setImageUrl(initialUrl.trim());
+          } else {
+            setImageUrl(DEFAULT_PROFILE_IMAGE);
+          }
+        },
+        (err) => {
+          console.warn('[CMS] Realtime profile photo listener notice:', err);
+        }
+      );
+      return () => unsubscribe();
+    } catch {
+      // Graceful fallback
+    }
+  }, [initialUrl]);
+
+  return imageUrl;
+}
+
+/**
+ * Realtime hook for reading dynamic branding configuration from Firestore site_content/branding.
+ * Controls website logo, business name, tagline, sizing, and header visibility switches.
+ */
+export function useBranding(initial?: Partial<BrandingContent>): BrandingContent {
+  const [branding, setBranding] = useState<BrandingContent>({
+    ...DEFAULT_BRANDING_CONTENT,
+    ...initial,
+  });
+
+  useEffect(() => {
+    try {
+      const docRef = doc(db, COLLECTIONS.SITE_CONTENT, 'branding');
+      const unsubscribe = onSnapshot(
+        docRef,
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data() as Partial<BrandingContent>;
+            setBranding((prev) => ({
+              ...prev,
+              ...data,
+              logoUrl: data.logoUrl || prev.logoUrl || DEFAULT_PROFILE_IMAGE,
+            }));
+          }
+        },
+        (err) => {
+          console.warn('[CMS] Realtime branding listener notice:', err);
+        }
+      );
+      return () => unsubscribe();
+    } catch {
+      // Graceful fallback
+    }
+  }, []);
+
+  return branding;
+}
+
+export type { BrandingContent, WhyUsContent };
+export { DEFAULT_BRANDING_CONTENT };
+

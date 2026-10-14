@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export const ALLOWED_REVALIDATE_SECTIONS = [
   'all',
+  'branding',
   'hero',
   'stats',
   'teaching',
@@ -53,7 +54,7 @@ export async function POST(request: Request) {
     revalidatePath('/', 'layout');
 
     // Selectively revalidate dedicated pages based on updated section
-    if (section === 'all' || section === 'about' || section === 'aboutPage') {
+    if (section === 'all' || section === 'branding' || section === 'about' || section === 'aboutPage') {
       revalidatePath('/about', 'page');
     }
     if (section === 'all' || section === 'book' || section === 'products') {

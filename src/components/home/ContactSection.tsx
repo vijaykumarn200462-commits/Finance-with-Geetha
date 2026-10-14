@@ -4,11 +4,14 @@ import React, { useState } from 'react';
 import { User, Phone, Mail, Clock, Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 import { useUserAuth } from '@/lib/firebase/user-auth';
 
+import { ContactPageContent } from '@/types/site-content';
+
 interface ContactSectionProps {
+  content?: ContactPageContent;
   enabled?: boolean;
 }
 
-export function ContactSection({ enabled = true }: ContactSectionProps) {
+export function ContactSection({ content, enabled = true }: ContactSectionProps) {
   const { currentUser } = useUserAuth();
 
   const [name, setName] = useState('');
@@ -19,9 +22,16 @@ export function ContactSection({ enabled = true }: ContactSectionProps) {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  if (enabled === false) {
+  if (enabled === false || (content && content.enabled === false)) {
     return null;
   }
+
+  const title = content?.title || 'Let’s Discuss Your Business Accounting';
+  const subtitle = content?.subtitle || 'Reach out directly via phone or email, or drop a message using the form below.';
+  const supportEmail = content?.supportEmail || 'Cageethanofficail@gmail.com';
+  const supportPhone = content?.phone || '9538913912';
+  const workingHours = content?.workingHours || 'Monday – Saturday: 9:00 AM – 6:00 PM';
+  const isFormEnabled = content?.formEnabled !== false;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,18 +83,18 @@ export function ContactSection({ enabled = true }: ContactSectionProps) {
   };
 
   return (
-    <section id="contact" className="py-20 bg-white border-t border-slate-200">
+    <section id="contact" className="py-20 bg-white border-t border-slate-200 scroll-mt-24 sm:scroll-mt-28">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="text-xs font-semibold text-[#138354] uppercase tracking-widest inline-block bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
             Get in Touch
           </span>
           <h2 className="text-3xl sm:text-4xl font-serif font-bold text-[#0f2c59] mt-3 tracking-tight">
-            Let’s Discuss Your Business Accounting
+            {title}
           </h2>
           <div className="w-20 h-1 bg-[#138354] mx-auto rounded-full my-3" />
           <p className="text-slate-600 text-base leading-relaxed">
-            Reach out directly via phone or email, or drop a message using the form below.
+            {subtitle}
           </p>
         </div>
 
@@ -110,8 +120,8 @@ export function ContactSection({ enabled = true }: ContactSectionProps) {
                   </div>
                   <div>
                     <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Phone Number</p>
-                    <a href="tel:9538913912" className="text-base font-bold text-[#0f2c59] hover:text-[#138354] transition-colors">
-                      9538913912
+                    <a href={`tel:${supportPhone.replace(/\D/g, '')}`} className="text-base font-bold text-[#0f2c59] hover:text-[#138354] transition-colors">
+                      {supportPhone}
                     </a>
                   </div>
                 </div>
@@ -123,10 +133,10 @@ export function ContactSection({ enabled = true }: ContactSectionProps) {
                   <div>
                     <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">Email Address</p>
                     <a
-                      href="mailto:Cageethanofficail@gmail.com"
+                      href={`mailto:${supportEmail}`}
                       className="text-base font-bold text-[#0f2c59] hover:text-[#138354] transition-colors break-all"
                     >
-                      Cageethanofficail@gmail.com
+                      {supportEmail}
                     </a>
                   </div>
                 </div>
@@ -138,7 +148,7 @@ export function ContactSection({ enabled = true }: ContactSectionProps) {
                 <Clock className="w-5 h-5 text-[#138354] flex-shrink-0 mt-0.5" />
                 <div>
                   <h4 className="font-bold text-sm text-[#0f2c59] mb-1">Working Hours</h4>
-                  <p className="text-sm text-slate-600">Monday – Saturday: 9:00 AM – 6:00 PM</p>
+                  <p className="text-sm text-slate-600">{workingHours}</p>
                 </div>
               </div>
             </div>
@@ -148,7 +158,24 @@ export function ContactSection({ enabled = true }: ContactSectionProps) {
           <div className="lg:col-span-7 bg-[#f8fafc] p-8 sm:p-10 rounded-2xl border border-slate-200 shadow-sm">
             <h3 className="text-xl font-bold font-serif text-[#0f2c59] mb-6">Send a Quick Inquiry</h3>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {!isFormEnabled ? (
+              <div className="p-6 bg-amber-50/80 border border-amber-200 rounded-xl text-center">
+                <p className="text-sm font-medium text-amber-900 mb-2">
+                  Direct Inquiries Preferred
+                </p>
+                <p className="text-xs text-amber-800">
+                  Online submissions are currently paused. Please reach out directly by calling{' '}
+                  <a href={`tel:${supportPhone}`} className="font-semibold underline">
+                    {supportPhone}
+                  </a>{' '}
+                  or emailing{' '}
+                  <a href={`mailto:${supportEmail}`} className="font-semibold underline">
+                    {supportEmail}
+                  </a>.
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="inquiry-name" className="block text-xs font-semibold text-slate-700 uppercase mb-1.5 tracking-wider">
@@ -241,7 +268,8 @@ export function ContactSection({ enabled = true }: ContactSectionProps) {
                   </>
                 )}
               </button>
-            </form>
+              </form>
+            )}
           </div>
         </div>
       </div>
