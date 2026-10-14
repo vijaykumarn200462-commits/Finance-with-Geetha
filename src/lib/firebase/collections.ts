@@ -11,6 +11,7 @@ export const COLLECTIONS = {
   MESSAGES: 'messages',
   SITE_CONTENT: 'site_content',
   SETTINGS: 'settings',
+  HOMEPAGE_REVIEWS: 'homepageReviews',
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

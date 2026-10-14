@@ -153,30 +153,31 @@ export function Navbar({ onOpenCommunityCheckout, profileImageUrl, config: custo
     }
   };
 
-  // Secondary items nested under "More"
+  // Secondary items nested under "More" (filtered by persistent navigation config)
   const moreLinks = [
-    {
-      label: 'Community',
+    ...(navConfig.showCommunity ? [{
+      label: 'The Community',
       href: '/community',
       description: 'Weekly live coaching & templates',
       price: formatPrice(pricing.community, 'mo'),
       icon: Users,
-    },
-    {
-      label: 'Book',
+    }] : []),
+    ...(navConfig.showBook ? [{
+      label: 'The Book',
       href: '/book',
       description: 'The Playbook guidebook',
       price: formatPrice(pricing.book),
       icon: BookOpen,
-    },
-    {
-      label: 'Store',
+    }] : []),
+    ...(navConfig.showStore ? [{
+      label: 'Templates & Cheat Sheets',
       href: '/store',
       description: 'Checklists & cheat sheets',
       icon: ShoppingBag,
-    },
+    }] : []),
   ];
 
+  const hasActiveMoreItems = Boolean(showMore && moreLinks.length > 0);
   const isMoreActive = ['/community', '/book', '/store'].some((path) => pathname === path);
 
   const displayName =
@@ -250,8 +251,8 @@ export function Navbar({ onOpenCommunityCheckout, profileImageUrl, config: custo
                 );
               })}
 
-              {/* 3. More Dropdown (Community, Book, Store) - Hidden by default */}
-              {showMore && (
+              {/* 3. More Dropdown (Community, Book, Store) - Hidden when no active items */}
+              {hasActiveMoreItems && (
                 <div className="relative" ref={moreDropdownRef}>
                   <button
                     type="button"
@@ -465,8 +466,8 @@ export function Navbar({ onOpenCommunityCheckout, profileImageUrl, config: custo
               </nav>
             </div>
 
-            {/* Extended Resources (Community, Book, Store) - Hidden by default */}
-            {showMore && (
+            {/* Extended Resources (Community, Book, Store) - Hidden when no active items */}
+            {hasActiveMoreItems && (
               <div className="space-y-1 pt-2 border-t border-slate-100">
                 <div className="px-3 py-1 text-[11px] font-mono uppercase tracking-wider text-slate-400 font-semibold">
                   Resources & Store

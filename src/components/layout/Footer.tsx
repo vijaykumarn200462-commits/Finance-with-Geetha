@@ -8,6 +8,8 @@ import { useCurrency } from '@/lib/context/CurrencyContext';
 import { CurrencySelector } from './CurrencySelector';
 import { ConnectionInfoModal } from './ConnectionInfoModal';
 
+import { DEFAULT_NAVIGATION_CONFIG } from '@/lib/config/navigation';
+
 function YoutubeIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" fill="currentColor">
@@ -82,31 +84,64 @@ export function Footer({ profileImageUrl }: FooterProps = {}) {
               Explore
             </p>
             <ul className="space-y-2.5 text-sm text-[#D5D5CF]">
-              <li>
-                <Link href="/#what-i-teach" className="hover:text-white transition-colors">
-                  What I Teach
-                </Link>
-              </li>
-              <li>
-                <Link href="/community" className="hover:text-white transition-colors">
-                  The Community ({formatPrice(pricing.community, 'mo')})
-                </Link>
-              </li>
-              <li>
-                <Link href="/book" className="hover:text-white transition-colors">
-                  The Book ({formatPrice(pricing.book)})
-                </Link>
-              </li>
-              <li>
-                <Link href="/store" className="hover:text-white transition-colors">
-                  Templates & Cheat Sheets
-                </Link>
-              </li>
-              <li>
-                <Link href="/about" className="hover:text-white transition-colors">
-                  About Geetha
-                </Link>
-              </li>
+              {DEFAULT_NAVIGATION_CONFIG.showAbout && (
+                <li>
+                  <Link href="/#about" className="hover:text-white transition-colors">
+                    About Geetha
+                  </Link>
+                </li>
+              )}
+              {DEFAULT_NAVIGATION_CONFIG.showServices && (
+                <li>
+                  <Link href="/#services" className="hover:text-white transition-colors">
+                    Services & Solutions
+                  </Link>
+                </li>
+              )}
+              {DEFAULT_NAVIGATION_CONFIG.showWhyUs && (
+                <li>
+                  <Link href="/#why-us" className="hover:text-white transition-colors">
+                    Why Choose Us
+                  </Link>
+                </li>
+              )}
+              {DEFAULT_NAVIGATION_CONFIG.showContact && (
+                <li>
+                  <Link href="/#contact" className="hover:text-white transition-colors">
+                    Contact & Inquiries
+                  </Link>
+                </li>
+              )}
+
+              {/* Extended items - hidden by default per user specification */}
+              {DEFAULT_NAVIGATION_CONFIG.showWhatITeach && (
+                <li>
+                  <Link href="/#what-i-teach" className="hover:text-white transition-colors">
+                    What I Teach
+                  </Link>
+                </li>
+              )}
+              {DEFAULT_NAVIGATION_CONFIG.showCommunity && (
+                <li>
+                  <Link href="/community" className="hover:text-white transition-colors">
+                    The Community ({formatPrice(pricing.community, 'mo')})
+                  </Link>
+                </li>
+              )}
+              {DEFAULT_NAVIGATION_CONFIG.showBook && (
+                <li>
+                  <Link href="/book" className="hover:text-white transition-colors">
+                    The Book ({formatPrice(pricing.book)})
+                  </Link>
+                </li>
+              )}
+              {DEFAULT_NAVIGATION_CONFIG.showStore && (
+                <li>
+                  <Link href="/store" className="hover:text-white transition-colors">
+                    Templates & Cheat Sheets
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
 

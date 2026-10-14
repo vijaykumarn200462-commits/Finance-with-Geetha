@@ -510,15 +510,26 @@ export default function AdminDashboardClient() {
                 >
                   <div className="flex items-center justify-between mb-1">
                     <p className="text-xs font-semibold text-gray-900">{msg.name}</p>
-                    <span
-                      className={`text-[10px] font-mono px-2 py-0.5 rounded font-medium uppercase ${
-                        msg.status === 'unread'
-                          ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                          : 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      {msg.status}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {msg.emailDeliveryStatus === 'sent' ? (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-50 text-[#138354] border border-emerald-200">
+                          Email Sent
+                        </span>
+                      ) : msg.emailDeliveryStatus === 'failed' ? (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">
+                          Email Failed
+                        </span>
+                      ) : null}
+                      <span
+                        className={`text-[10px] font-mono px-2 py-0.5 rounded font-medium uppercase ${
+                          msg.status === 'unread'
+                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {msg.status}
+                      </span>
+                    </div>
                   </div>
                   <p className="text-xs text-gray-600 line-clamp-2 leading-relaxed">
                     {msg.message}

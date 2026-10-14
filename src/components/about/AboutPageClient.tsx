@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { CheckoutModal } from '@/components/modals/CheckoutModal';
 import { ArrowRight } from 'lucide-react';
 import { MobileStickyBar } from '@/components/layout/MobileStickyBar';
+import { DEFAULT_NAVIGATION_CONFIG } from '@/lib/config/navigation';
 import {
   useSectionContent,
   useProfilePhoto,
@@ -159,7 +160,9 @@ export default function AboutPageClient({ initialData }: AboutPageClientProps) {
       </main>
 
       <Footer />
-      <MobileStickyBar onJoinClick={() => setIsCheckoutOpen(true)} />
+      {DEFAULT_NAVIGATION_CONFIG.showCommunity && (
+        <MobileStickyBar onJoinClick={() => setIsCheckoutOpen(true)} />
+      )}
 
       <CheckoutModal
         isOpen={isCheckoutOpen}

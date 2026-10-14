@@ -22,13 +22,15 @@ export function ContactSection({ content, enabled = true }: ContactSectionProps)
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+
   if (enabled === false || (content && content.enabled === false)) {
     return null;
   }
 
   const title = content?.title || 'Let’s Discuss Your Business Accounting';
   const subtitle = content?.subtitle || 'Reach out directly via phone or email, or drop a message using the form below.';
-  const supportEmail = content?.supportEmail || 'Cageethanofficail@gmail.com';
+  const supportEmail = content?.supportEmail || 'cageethanofficial@gmail.com';
   const supportPhone = content?.phone || '9538913912';
   const workingHours = content?.workingHours || 'Monday – Saturday: 9:00 AM – 6:00 PM';
   const isFormEnabled = content?.formEnabled !== false;
@@ -37,7 +39,28 @@ export function ContactSection({ content, enabled = true }: ContactSectionProps)
     e.preventDefault();
     setIsSubmitting(true);
     setSuccessMessage(null);
+    setInfoMessage(null);
     setErrorMessage(null);
+
+    // Client-side validation
+    if (name.trim().length < 2) {
+      setErrorMessage('Please enter your full name (at least 2 characters).');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setErrorMessage('Please enter a valid email address.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    if (message.trim().length < 10) {
+      setErrorMessage('Please provide a message with at least 10 characters detailing your bookkeeping needs.');
+      setIsSubmitting(false);
+      return;
+    }
 
     try {
       const headers: Record<string, string> = {
@@ -49,27 +72,31 @@ export function ContactSection({ content, enabled = true }: ContactSectionProps)
         headers['Authorization'] = `Bearer ${token}`;
       }
 
-      // Combine phone into message or subject for context if needed
-      const fullMessage = phone ? `[Phone: ${phone}]\n\n${message}` : message;
-
       const res = await fetch('/api/contact', {
         method: 'POST',
         headers,
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim(),
-          message: fullMessage.trim(),
-          subject: `Consultation Inquiry from ${name.trim()}`,
+          phone: phone.trim(),
+          message: message.trim(),
+          topic: 'Bookkeeping & Accounting Inquiry',
         }),
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || 'Failed to send message. Please try again or call directly.');
+        throw new Error(data.error || 'Failed to submit inquiry. Please try again or call directly.');
       }
 
-      setSuccessMessage('Thank you! Your inquiry has been sent to Geetha N. We will get back to you soon.');
+      if (data.emailDelivered) {
+        setSuccessMessage(data.message || 'Thank you! Your inquiry has been sent to Geetha N.');
+      } else {
+        setInfoMessage(data.message || 'Your inquiry was saved successfully to our system.');
+      }
+
+      // Reset form fields after successful save
       setName('');
       setPhone('');
       setEmail('');
@@ -248,6 +275,13 @@ export function ContactSection({ content, enabled = true }: ContactSectionProps)
                 <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-xl text-sm flex items-start gap-2.5">
                   <CheckCircle2 className="w-5 h-5 text-[#138354] flex-shrink-0 mt-0.5" />
                   <span>{successMessage}</span>
+                </div>
+              )}
+
+              {infoMessage && (
+                <div className="p-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-sm flex items-start gap-2.5">
+                  <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                  <span>{infoMessage}</span>
                 </div>
               )}
 

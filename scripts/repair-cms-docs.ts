@@ -5,6 +5,7 @@ loadEnvConfig(path.resolve(process.cwd()));
 import { adminDb } from '../src/lib/firebase/admin';
 import { COLLECTIONS } from '../src/lib/firebase/collections';
 import {
+  DEFAULT_BRANDING_CONTENT,
   DEFAULT_CALL_STRUCTURE_CONTENT,
   DEFAULT_COMMUNITY_PAGE_CONTENT,
   DEFAULT_ABOUT_PAGE_CONTENT,
@@ -18,6 +19,7 @@ async function repairMissingCmsDocs() {
   console.log('================================================================\n');
 
   const REQUIRED_DOCS: Record<string, Record<string, unknown>> = {
+    branding: DEFAULT_BRANDING_CONTENT as unknown as Record<string, unknown>,
     callStructure: DEFAULT_CALL_STRUCTURE_CONTENT as unknown as Record<string, unknown>,
     communityPage: DEFAULT_COMMUNITY_PAGE_CONTENT as unknown as Record<string, unknown>,
     aboutPage: DEFAULT_ABOUT_PAGE_CONTENT as unknown as Record<string, unknown>,

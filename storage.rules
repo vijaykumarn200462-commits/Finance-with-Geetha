@@ -34,6 +34,11 @@ service firebase.storage {
       allow write: if isAdmin();
     }
 
+    match /reviews/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Protected digital downloads (books, templates)
     // Only admins or authenticated buyers (via signed URLs or server admin proxy)
     match /books/{allPaths=**} {

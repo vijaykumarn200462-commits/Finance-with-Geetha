@@ -1,5 +1,9 @@
 import { adminDb } from './admin';
 import { COLLECTIONS } from './collections';
+import {
+  DEFAULT_REVIEWS_SECTION_CONTENT,
+  INITIAL_REVIEWS,
+} from './reviews-defaults';
 
 export const DEFAULT_SEED_PRODUCTS = [
   {
@@ -183,6 +187,7 @@ export const DEFAULT_SITE_CONTENT = {
     primaryButtonText: 'Join the Community — ₹150/mo',
     secondaryButtonText: 'Start with the Book — ₹29',
   },
+  reviews: DEFAULT_REVIEWS_SECTION_CONTENT,
 };
 
 export const DEFAULT_SETTINGS = {
@@ -216,11 +221,13 @@ export async function seedInitialFirestoreData(): Promise<{
   productsSkipped: number;
   contentCreated: string[];
   settingsCreated: string[];
+  reviewsCreated: number;
 }> {
   let productsCreated = 0;
   const productsSkipped = 0;
   const contentCreated: string[] = [];
   const settingsCreated: string[] = [];
+  let reviewsCreated = 0;
 
   // 1. Seed or update Products
   for (const product of DEFAULT_SEED_PRODUCTS) {
@@ -261,10 +268,25 @@ export async function seedInitialFirestoreData(): Promise<{
     settingsCreated.push(settingsKey);
   }
 
+  // 4. Seed or update Reviews in homepageReviews collection
+  for (const rev of INITIAL_REVIEWS) {
+    const docRef = adminDb.collection(COLLECTIONS.HOMEPAGE_REVIEWS).doc(rev.id);
+    await docRef.set(
+      {
+        ...rev,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+    reviewsCreated++;
+  }
+
   return {
     productsCreated,
     productsSkipped,
     contentCreated,
     settingsCreated,
+    reviewsCreated,
   };
 }

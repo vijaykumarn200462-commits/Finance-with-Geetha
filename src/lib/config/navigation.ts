@@ -11,6 +11,7 @@ export interface NavigationConfig {
   showCommunity: boolean;
   showBook: boolean;
   showStore: boolean;
+  showWhatITeach: boolean;
   showAbout: boolean;
   showServices: boolean;
   showWhyUs: boolean;
@@ -24,6 +25,7 @@ export const DEFAULT_NAVIGATION_CONFIG: NavigationConfig = {
   showCommunity: false, // Temporarily hidden per user request
   showBook: false, // Temporarily hidden per user request
   showStore: false, // Temporarily hidden per user request
+  showWhatITeach: false, // Temporarily hidden per user request
   showAbout: true,
   showServices: true,
   showWhyUs: true,

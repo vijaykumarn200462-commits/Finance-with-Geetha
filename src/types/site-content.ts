@@ -256,6 +256,39 @@ export interface WhyUsContent {
   ctaPhone?: string;
 }
 
+export interface ReviewItem {
+  id: string;
+  reviewerName: string;
+  reviewCountText?: string;
+  rating: number;
+  reviewDate: string;
+  isNew?: boolean;
+  reviewText: string;
+  ownerResponse?: string | null;
+  ownerResponseDate?: string | null;
+  reviewerImageUrl?: string | null;
+  reviewerInitials?: string;
+  avatarBgColor?: string;
+  reviewScreenshotUrl?: string | null;
+  sortOrder: number;
+  isVisible: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface ReviewsSectionContent {
+  enabled?: boolean;
+  heading: string;
+  subtitle: string;
+  googleMapsUrl: string;
+  showGoogleRatingBadge?: boolean;
+  averageRating?: number;
+  totalReviewsCount?: number;
+  autoAdvanceSeconds?: number;
+  reviews: ReviewItem[];
+  updatedAt?: string;
+}
+
 export interface SiteContentMap {
   hero: HeroContent;
   stats: StatsContent;
@@ -275,5 +308,6 @@ export interface SiteContentMap {
   whyUs?: WhyUsContent;
   services?: TeachingContent;
   branding?: BrandingContent;
+  reviews?: ReviewsSectionContent;
 }
 

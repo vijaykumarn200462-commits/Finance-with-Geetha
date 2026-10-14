@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { COLLECTIONS } from '@/lib/firebase/collections';
+import { sendContactInquiryNotification } from '@/lib/email/contact-notification';
+import { EmailDeliveryStatus } from '@/types/message';
 
 // In-memory rate limiter for public inquiry protection (max 5 requests per 10 minutes per IP)
 const ipRateLimitMap = new Map<string, { count: number; firstRequestTime: number }>();
@@ -56,7 +58,7 @@ export async function POST(request: Request) {
 
       if (!checkRateLimit(clientIp)) {
         return NextResponse.json(
-          { error: 'Too many inquiries sent. Please wait a few minutes before submitting again.' },
+          { error: 'Too many inquiries sent from this network. Please wait a few minutes before submitting again.' },
           { status: 429 }
         );
       }
@@ -64,84 +66,105 @@ export async function POST(request: Request) {
 
     // 2. Validate request body
     const body = await request.json().catch(() => ({}));
-    const { name, email, phone, message, topic } = body;
+    const { name, email, phone, message, topic, subject } = body;
 
     if (!name || typeof name !== 'string' || name.trim().length < 2) {
-      return NextResponse.json({ error: 'Please provide your full name (at least 2 characters).' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Please provide your full name (at least 2 characters).' },
+        { status: 400 }
+      );
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const contactEmail = (email && typeof email === 'string' && email.trim()) || verifiedEmail;
     if (!contactEmail || !emailRegex.test(contactEmail)) {
-      return NextResponse.json({ error: 'Please provide a valid email address.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Please provide a valid email address.' },
+        { status: 400 }
+      );
     }
 
     if (!message || typeof message !== 'string' || message.trim().length < 10) {
       return NextResponse.json(
-        { error: 'Please provide a message with at least 10 characters.' },
+        { error: 'Please provide a message with at least 10 characters detailing your bookkeeping needs.' },
         { status: 400 }
       );
     }
 
     const contactPhone = typeof phone === 'string' && phone.trim() ? phone.trim() : null;
+    const inquiryTopic = (topic && typeof topic === 'string' && topic.trim()) ||
+      (subject && typeof subject === 'string' && subject.trim()) ||
+      'Bookkeeping & Accounting Inquiry';
 
-    // 3. Save directly to Firestore messages collection
+    const submissionTime = new Date().toISOString();
+
+    // 3. Dispatch Email Notification to cageethanofficial@gmail.com
+    const emailResult = await sendContactInquiryNotification({
+      name: name.trim(),
+      email: contactEmail.trim(),
+      phone: contactPhone,
+      topic: inquiryTopic,
+      message: message.trim(),
+      submittedAt: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+    });
+
+    const deliveryStatus: EmailDeliveryStatus = emailResult.status;
+
+    // 4. Save Inquiry to Firestore (messages collection)
     const docRef = await adminDb.collection(COLLECTIONS.MESSAGES).add({
       userId: verifiedUserId,
       name: name.trim(),
       email: contactEmail.trim(),
       phone: contactPhone,
-      topic: (topic && typeof topic === 'string') ? topic.trim() : 'Bookkeeping Services',
+      topic: inquiryTopic,
       message: message.trim(),
       status: 'unread',
       isPublic: verifiedUserId === 'public_inquiry',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      emailDeliveryStatus: deliveryStatus,
+      emailDeliveryError: emailResult.error || null,
+      emailDeliveryId: emailResult.id || null,
+      emailRecipient: emailResult.recipient,
+      emailSentAt: emailResult.success ? submissionTime : null,
+      createdAt: submissionTime,
+      updatedAt: submissionTime,
     });
 
     const messageId = docRef.id;
 
-    console.log('[Contact Message Stored]', {
+    console.log('[Contact Message Stored in Firestore]', {
       id: messageId,
       userId: verifiedUserId,
       name: name.trim(),
       email: contactEmail.trim(),
       phone: contactPhone,
-      timestamp: new Date().toISOString(),
+      emailDeliveryStatus: deliveryStatus,
+      recipient: emailResult.recipient,
     });
 
-    // 4. Send email notification via Resend if key is available
-    const resendKey = process.env.RESEND_API_KEY;
-    if (resendKey && !resendKey.includes('placeholder')) {
-      try {
-        await fetch('https://api.resend.com/emails', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${resendKey}`,
-          },
-          body: JSON.stringify({
-            from: 'Finance with Geetha <cageethanofficial@gmail.com>',
-            to: process.env.CONTACT_NOTIFICATION_EMAIL || 'cageethanofficial@gmail.com',
-            reply_to: contactEmail.trim(),
-            subject: `New Coaching Inquiry from ${name.trim()} [${topic || 'General'}]`,
-            text: `Name: ${name.trim()}\nEmail: ${contactEmail.trim()}\nUser ID: ${verifiedUserId}\nTopic: ${topic || 'General'}\n\nMessage:\n${message.trim()}`,
-          }),
-        });
-      } catch (err) {
-        console.warn('Resend notification dispatch failed:', err);
-      }
+    // 5. Construct accurate response message
+    let responseMessage: string;
+    if (emailResult.success) {
+      responseMessage = `Thank you for reaching out! Your inquiry has been delivered directly to Geetha N. (${emailResult.recipient}). You will receive a response within 24–48 business hours.`;
+    } else if (emailResult.status === 'not_configured') {
+      responseMessage = `Thank you! Your inquiry has been safely stored in our system. Email notifications are currently being configured by our administrator. Geetha can view your message in the admin console, or you may call directly at 9538913912.`;
+    } else {
+      responseMessage = `Your inquiry has been saved in our system! However, direct email delivery reported: "${emailResult.error || 'Delivery issue'}". Geetha has access to your inquiry in the admin portal, and you may also call directly at 9538913912.`;
     }
 
     return NextResponse.json({
       success: true,
+      inquirySaved: true,
       messageId,
-      message: 'Thank you for reaching out. Geetha reviews all inquiries personally and will respond within 24–48 business hours.',
+      emailDelivered: emailResult.success,
+      emailDeliveryStatus: deliveryStatus,
+      emailDeliveryError: emailResult.error || null,
+      emailRecipient: emailResult.recipient,
+      message: responseMessage,
     });
   } catch (error: unknown) {
     console.error('Contact route error:', error);
     return NextResponse.json(
-      { error: 'Something went wrong while processing your message. Please try again.' },
+      { error: 'Something went wrong while processing your inquiry. Please try again or reach out directly by phone.' },
       { status: 500 }
     );
   }

@@ -9,6 +9,7 @@ import { CallStructure } from '@/components/home/CallStructure';
 import { BookSection } from '@/components/home/BookSection';
 import { StoreSection } from '@/components/home/StoreSection';
 import { OneOnOneSection } from '@/components/home/OneOnOneSection';
+import { GoogleReviewsSection } from '@/components/home/GoogleReviewsSection';
 import { AboutSection } from '@/components/home/AboutSection';
 import { ServicesSection } from '@/components/home/ServicesSection';
 import { WhyUsSection } from '@/components/home/WhyUsSection';
@@ -37,6 +38,7 @@ import {
   DEFAULT_WHY_US_CONTENT,
   DEFAULT_CONTACT_PAGE_CONTENT,
   DEFAULT_BRANDING_CONTENT,
+  DEFAULT_REVIEWS_SECTION_CONTENT,
 } from '@/lib/firebase/content';
 import {
   HeroContent,
@@ -52,6 +54,7 @@ import {
   WhyUsContent,
   ContactPageContent,
   BrandingContent,
+  ReviewsSectionContent,
 } from '@/types/site-content';
 
 import { InitialSiteContentInput } from '@/lib/firebase/content';
@@ -80,6 +83,7 @@ export default function HomePageClient({ initialSections, initialContent }: Home
   const storeContent = getSection<StoreSectionContent>('store', DEFAULT_STORE_SECTION_CONTENT);
   const oneOnOneContent = getSection<OneOnOneContent>('oneOnOne', DEFAULT_ONE_ON_ONE_CONTENT);
   const aboutContent = getSection<AboutContent>('about', DEFAULT_ABOUT_CONTENT);
+  const reviewsContent = getSection<ReviewsSectionContent>('reviews', DEFAULT_REVIEWS_SECTION_CONTENT);
   const whyUsContent = getSection<WhyUsContent>('whyUs', DEFAULT_WHY_US_CONTENT);
   const finalCtaContent = getSection<FinalCTAContent>('finalCta', DEFAULT_FINAL_CTA_CONTENT);
   const contactPageContent = getSection<ContactPageContent>('contactPage', DEFAULT_CONTACT_PAGE_CONTENT);
@@ -213,6 +217,10 @@ export default function HomePageClient({ initialSections, initialContent }: Home
             onJoinCommunity={() => handleCheckout('community')}
             onGetBook={() => handleCheckout('book')}
           />
+        )}
+
+        {isSectionEnabled('reviews', true) && (
+          <GoogleReviewsSection content={reviewsContent} id="reviews" />
         )}
 
         {isSectionEnabled('about') && <AboutSection content={aboutContent} id="about" />}

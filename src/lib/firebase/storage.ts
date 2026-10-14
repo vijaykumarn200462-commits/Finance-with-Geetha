@@ -31,17 +31,49 @@ export function uploadFileWithProgress(
       const storageRef = ref(storage, storagePath);
       const uploadTask = uploadBytesResumable(storageRef, file);
 
-      // Safety timeout: if upload has 0 progress after 6 seconds (e.g. bucket doesn't exist and SDK retry loop triggers), cancel task
-      timeoutTimer = setTimeout(() => {
-        if (!completed && uploadTask.snapshot.bytesTransferred === 0) {
+      // Sliding inactivity timer: if no progress occurs for 5 consecutive seconds, cancel and fail
+      let lastBytes = -1;
+      let lastProgressTime = Date.now();
+
+      const inactivityCheckInterval = setInterval(() => {
+        if (completed) {
+          clearInterval(inactivityCheckInterval);
+          return;
+        }
+        const currentBytes = uploadTask.snapshot.bytesTransferred;
+        if (currentBytes !== lastBytes) {
+          lastBytes = currentBytes;
+          lastProgressTime = Date.now();
+        } else if (Date.now() - lastProgressTime > 6000) {
+          // Stalled for > 6 seconds without transferring any new bytes
+          clearInterval(inactivityCheckInterval);
+          completed = true;
           uploadTask.cancel();
           reject(
             new Error(
-              'Firebase Storage upload timed out after 6 seconds. The storage bucket is either unreachable or not yet provisioned in Firebase Console.'
+              `Upload stalled at ${Math.round(
+                uploadTask.snapshot.totalBytes > 0
+                  ? (uploadTask.snapshot.bytesTransferred / uploadTask.snapshot.totalBytes) * 100
+                  : 0
+              )}%. Storage connection interrupted or bucket unreachable.`
             )
           );
         }
-      }, 6000);
+      }, 1000);
+
+      // Hard safety timeout of 30 seconds
+      timeoutTimer = setTimeout(() => {
+        if (!completed) {
+          completed = true;
+          clearInterval(inactivityCheckInterval);
+          uploadTask.cancel();
+          reject(
+            new Error(
+              'Upload timed out after 30 seconds. Storage connection interrupted.'
+            )
+          );
+        }
+      }, 30000);
 
       uploadTask.on(
         'state_changed',
@@ -59,6 +91,7 @@ export function uploadFileWithProgress(
         },
         (error) => {
           completed = true;
+          clearInterval(inactivityCheckInterval);
           if (timeoutTimer) clearTimeout(timeoutTimer);
           console.error('[Firebase Storage] Upload task error:', error);
 
@@ -86,6 +119,7 @@ export function uploadFileWithProgress(
         },
         async () => {
           completed = true;
+          clearInterval(inactivityCheckInterval);
           if (timeoutTimer) clearTimeout(timeoutTimer);
           try {
             const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);

@@ -34,8 +34,14 @@ import {
   StorePageContent,
   WhyUsContent,
   BrandingContent,
+  ReviewItem,
+  ReviewsSectionContent,
 } from '@/types/site-content';
-import { DEFAULT_BRANDING_CONTENT } from './content-defaults';
+import {
+  DEFAULT_BRANDING_CONTENT,
+  DEFAULT_REVIEWS_SECTION_CONTENT,
+  INITIAL_REVIEWS,
+} from './content-defaults';
 import { SocialSettings, ContactSettings } from '@/types/settings';
 import {
   BUSINESS_STATS,
@@ -876,6 +882,99 @@ export function useBranding(initial?: Partial<BrandingContent>): BrandingContent
   return branding;
 }
 
-export type { BrandingContent, WhyUsContent };
-export { DEFAULT_BRANDING_CONTENT };
+/**
+ * Realtime hook for reading Reviews section settings and individual reviews.
+ * Synchronizes with Firestore `site_content/reviews` and `homepageReviews` collection.
+ */
+export function useReviews(initial?: Partial<ReviewsSectionContent>): {
+  content: ReviewsSectionContent;
+  visibleReviews: ReviewItem[];
+  loading: boolean;
+} {
+  const [content, setContent] = useState<ReviewsSectionContent>({
+    ...DEFAULT_REVIEWS_SECTION_CONTENT,
+    ...initial,
+  });
+  const [collectionReviews, setCollectionReviews] = useState<ReviewItem[] | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  // 1. Listen to site_content/reviews for section metadata
+  useEffect(() => {
+    try {
+      const docRef = doc(db, COLLECTIONS.SITE_CONTENT, 'reviews');
+      const unsubscribe = onSnapshot(
+        docRef,
+        (snap) => {
+          if (snap.exists()) {
+            const data = snap.data() as Partial<ReviewsSectionContent>;
+            setContent((prev) => ({
+              ...prev,
+              ...data,
+              reviews: data.reviews && data.reviews.length > 0 ? data.reviews : prev.reviews,
+            }));
+          }
+          setLoading(false);
+        },
+        (err) => {
+          console.warn('[CMS] Realtime reviews section listener notice:', err);
+          setLoading(false);
+        }
+      );
+      return () => unsubscribe();
+    } catch {
+      Promise.resolve().then(() => setLoading(false));
+    }
+  }, []);
+
+  // 2. Listen to homepageReviews collection for granular review documents
+  useEffect(() => {
+    try {
+      const colRef = collection(db, COLLECTIONS.HOMEPAGE_REVIEWS);
+      const q = query(colRef, orderBy('sortOrder', 'asc'));
+      const unsubscribe = onSnapshot(
+        q,
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const items: ReviewItem[] = [];
+            snapshot.forEach((docSnap) => {
+              items.push({ id: docSnap.id, ...(docSnap.data() as Omit<ReviewItem, 'id'>) });
+            });
+            setCollectionReviews(items);
+          }
+        },
+        (err) => {
+          console.warn('[CMS] Realtime homepageReviews collection listener notice:', err);
+        }
+      );
+      return () => unsubscribe();
+    } catch {
+      // Non-blocking
+    }
+  }, []);
+
+  const allReviews = collectionReviews && collectionReviews.length > 0
+    ? collectionReviews
+    : content.reviews && content.reviews.length > 0
+    ? content.reviews
+    : INITIAL_REVIEWS;
+
+  const visibleReviews = useMemo(() => {
+    return allReviews
+      .filter((r) => r.isVisible !== false)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }, [allReviews]);
+
+  return {
+    content: {
+      ...content,
+      reviews: allReviews,
+    },
+    visibleReviews,
+    loading,
+  };
+}
+
+export type { BrandingContent, WhyUsContent, ReviewItem, ReviewsSectionContent };
+
+
 

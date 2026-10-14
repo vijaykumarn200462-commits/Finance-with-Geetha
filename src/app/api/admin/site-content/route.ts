@@ -10,6 +10,7 @@ import {
   DEFAULT_ABOUT_PAGE_CONTENT,
   DEFAULT_CONTACT_PAGE_CONTENT,
   DEFAULT_WHY_US_CONTENT,
+  DEFAULT_REVIEWS_SECTION_CONTENT,
 } from '@/lib/firebase/content-defaults';
 
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,7 @@ export const dynamic = 'force-dynamic';
 const ALLOWED_CMS_SECTIONS = [
   'branding',
   'hero',
+  'reviews',
   'stats',
   'teaching',
   'community',
@@ -152,6 +154,9 @@ export async function PUT(request: Request) {
       if (trimmedSection === 'contactPage') {
         revalidatePath('/contact', 'page');
       }
+      if (trimmedSection === 'reviews') {
+        revalidatePath('/', 'page');
+      }
     } catch (revalErr) {
       console.warn('[CMS API] Automatic revalidation notice:', revalErr);
     }
@@ -187,6 +192,7 @@ export async function POST(request: Request) {
       aboutPage: DEFAULT_ABOUT_PAGE_CONTENT as unknown as Record<string, unknown>,
       contactPage: DEFAULT_CONTACT_PAGE_CONTENT as unknown as Record<string, unknown>,
       whyUs: DEFAULT_WHY_US_CONTENT as unknown as Record<string, unknown>,
+      reviews: DEFAULT_REVIEWS_SECTION_CONTENT as unknown as Record<string, unknown>,
     };
 
     const created: string[] = [];

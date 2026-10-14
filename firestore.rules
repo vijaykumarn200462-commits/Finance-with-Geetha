@@ -89,6 +89,13 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Homepage Reviews: Public read, Admin write
+    // Customers have NO write access
+    match /homepageReviews/{reviewId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     // Settings: Public read, Admin write
     // Customers have NO write access
     match /settings/{section} {
