@@ -239,20 +239,7 @@ export default function AdminSettingsClient() {
         </button>
       </div>
 
-      {/* Notifications */}
-      {successMessage && (
-        <div className="flex items-center gap-2 p-4 rounded-xl bg-[#EAF0EC] border border-[#244634]/30 text-[#244634] text-sm animate-fadeIn">
-          <Check className="w-4 h-4 shrink-0" />
-          <span>{successMessage}</span>
-        </div>
-      )}
 
-      {errorMessage && (
-        <div className="flex items-center gap-2 p-4 rounded-xl bg-red-50 border border-red-200 text-red-700 text-sm animate-fadeIn">
-          <AlertCircle className="w-4 h-4 shrink-0" />
-          <span>{errorMessage}</span>
-        </div>
-      )}
 
       {/* Tabs */}
       <div className="flex items-center gap-2 border-b border-[#E2DBD0] overflow-x-auto pb-px">
@@ -540,8 +527,19 @@ export default function AdminSettingsClient() {
                       type="number"
                       min="15"
                       max="1440"
-                      value={regional.rateCacheTtlMinutes}
-                      onChange={(e) => setRegional({ ...regional, rateCacheTtlMinutes: Number(e.target.value) || 60 })}
+                      value={regional.rateCacheTtlMinutes ?? 60}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setRegional({
+                          ...regional,
+                          rateCacheTtlMinutes: v === '' ? ('' as unknown as number) : Number(v),
+                        });
+                      }}
+                      onBlur={() => {
+                        if (!regional.rateCacheTtlMinutes || Number(regional.rateCacheTtlMinutes) < 15) {
+                          setRegional({ ...regional, rateCacheTtlMinutes: 60 });
+                        }
+                      }}
                       className="w-full px-3.5 py-2 text-sm border border-[#E2DBD0] rounded-lg"
                     />
                     <span className="text-[11px] text-[#706E69] mt-1 block">
@@ -906,6 +904,37 @@ export default function AdminSettingsClient() {
           </>
         )}
       </form>
+
+      {/* Floating Non-Disruptive Toast Notifications */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2 max-w-md pointer-events-none">
+        {successMessage && (
+          <div className="pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl bg-[#244634] text-white text-xs font-semibold shadow-xl shadow-[#244634]/25 border border-emerald-500/30">
+            <Check className="w-4 h-4 text-emerald-300 shrink-0" />
+            <span className="flex-1 leading-snug">{successMessage}</span>
+            <button
+              type="button"
+              onClick={() => setSuccessMessage(null)}
+              className="text-white/60 hover:text-white ml-2 text-xs cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="pointer-events-auto flex items-center gap-2.5 px-4 py-3 rounded-xl bg-red-700 text-white text-xs font-semibold shadow-xl shadow-red-700/25 border border-red-800">
+            <AlertCircle className="w-4 h-4 text-red-200 shrink-0" />
+            <span className="flex-1 leading-snug">{errorMessage}</span>
+            <button
+              type="button"
+              onClick={() => setErrorMessage(null)}
+              className="text-white/60 hover:text-white ml-2 text-xs cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

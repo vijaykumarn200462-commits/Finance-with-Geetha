@@ -12,6 +12,7 @@ import {
   DEFAULT_WHY_US_CONTENT,
   DEFAULT_REVIEWS_SECTION_CONTENT,
 } from '@/lib/firebase/content-defaults';
+import type { ReviewItem } from '@/types/site-content';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,10 +88,34 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: `Unrecognized CMS section "${trimmedSection}"` }, { status: 400 });
     }
 
+    let finalData = { ...data };
+
+    // Recompute totalReviewsCount and averageRating strictly from enabled reviews
+    if (trimmedSection === 'reviews' && Array.isArray((data as { reviews?: ReviewItem[] }).reviews)) {
+      const reviewList = (data as { reviews: ReviewItem[] }).reviews;
+      const enabledList = reviewList.filter((r) => r.isVisible !== false);
+      const calculatedCount = enabledList.length;
+      const calculatedAvg =
+        enabledList.length > 0
+          ? Number(
+              (
+                enabledList.reduce((acc, r) => acc + (Number(r.rating) || 5), 0) /
+                enabledList.length
+              ).toFixed(1)
+            )
+          : 5.0;
+
+      finalData = {
+        ...finalData,
+        totalReviewsCount: calculatedCount,
+        averageRating: calculatedAvg,
+      };
+    }
+
     // Persist document to site_content using Admin SDK
     await adminDb.collection(COLLECTIONS.SITE_CONTENT).doc(trimmedSection).set(
       {
-        ...data,
+        ...finalData,
         updatedAt: new Date().toISOString(),
       },
       { merge: true }

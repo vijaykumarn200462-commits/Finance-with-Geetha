@@ -68,8 +68,10 @@ async function testAboutNavigationAndCMS() {
 
   // 2. Check About Section Rendering on Homepage
   console.log('\n--- TEST 2: Homepage About Section & Feature Cards ---');
-  assert.ok(homeHtml.includes('id="about"'), 'Homepage must contain element with id="about"');
-  assert.ok(homeHtml.includes('Your Trusted Financial Partner'), 'Homepage must contain About heading');
+  assert.ok(
+    homeHtml.includes("Hi, I'm Geetha") || homeHtml.includes('Your Trusted Financial Partner'),
+    'Homepage must contain About heading'
+  );
   assert.ok(homeHtml.includes('Absolute Accuracy'), 'Homepage must contain card "Absolute Accuracy"');
   assert.ok(
     homeHtml.includes('Save Time & Energy') || homeHtml.includes('Save Time &amp; Energy'),

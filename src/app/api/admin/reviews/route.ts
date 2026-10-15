@@ -283,15 +283,25 @@ async function syncReviewsToSectionDoc() {
       reviews.push({ id: d.id, ...(d.data() as Omit<ReviewItem, 'id'>) });
     });
 
+    // Authoritative statistics derived strictly from enabled (eligible) reviews
+    const enabledReviews = reviews.filter((r) => r.isVisible !== false);
+    const totalReviewsCount = enabledReviews.length;
+    const averageRating =
+      enabledReviews.length > 0
+        ? Number(
+            (
+              enabledReviews.reduce((acc, r) => acc + (Number(r.rating) || 5), 0) /
+              enabledReviews.length
+            ).toFixed(1)
+          )
+        : 5.0;
+
     const reviewsSectionRef = adminDb.collection(COLLECTIONS.SITE_CONTENT).doc('reviews');
     await reviewsSectionRef.set(
       {
         reviews,
-        totalReviewsCount: reviews.length,
-        averageRating:
-          reviews.length > 0
-            ? Number((reviews.reduce((acc, r) => acc + (r.rating || 5), 0) / reviews.length).toFixed(1))
-            : 5.0,
+        totalReviewsCount,
+        averageRating,
         updatedAt: new Date().toISOString(),
       },
       { merge: true }

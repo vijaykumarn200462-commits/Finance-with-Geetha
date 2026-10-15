@@ -47,15 +47,20 @@ export default function ContactPageClient({ initialData }: ContactPageClientProp
   const email = customEmail !== null ? customEmail : defaultEmail;
 
   const [topic, setTopic] = useState('General Question');
+  const [phone, setPhone] = useState('');
   const [message, setMessage] = useState('');
 
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [serverMessage, setServerMessage] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
-
+  const [idempotencyKey, setIdempotencyKey] = useState(
+    () => 'inq_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10)
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return; // Guard against double-clicks
     setErrorMessage(null);
 
     if (!name.trim()) {
@@ -81,6 +86,7 @@ export default function ContactPageClient({ initialData }: ContactPageClientProp
       const idToken = await getIdToken().catch(() => null);
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
       };
       if (idToken) {
         headers['Authorization'] = `Bearer ${idToken}`;
@@ -90,8 +96,10 @@ export default function ContactPageClient({ initialData }: ContactPageClientProp
         method: 'POST',
         headers,
         body: JSON.stringify({
+          idempotencyKey,
           name: name.trim(),
           email: email.trim(),
+          phone: phone.trim(),
           topic,
           message: message.trim(),
         }),
@@ -103,7 +111,10 @@ export default function ContactPageClient({ initialData }: ContactPageClientProp
         throw new Error(data.error || 'Failed to submit message.');
       }
 
+      setServerMessage(data.message || null);
       setIsSuccess(true);
+      // Generate a fresh idempotency key for any future submission
+      setIdempotencyKey('inq_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10));
     } catch (err: unknown) {
       const msg =
         err instanceof Error
@@ -204,8 +215,8 @@ export default function ContactPageClient({ initialData }: ContactPageClientProp
                     Message Sent
                   </h3>
                   <p className="text-sm text-[#5C5E5B] max-w-md mx-auto leading-relaxed">
-                    Thank you, {name}! Your message has been received. Geetha reads all notes personally
-                    and will reply to <strong>{email}</strong> within 24–48 business hours.
+                    {serverMessage ||
+                      `Thank you, ${name}! Your message has been received. Geetha reads all notes personally and will reply to ${email} within 24–48 business hours.`}
                   </p>
                   <div className="pt-4">
                     <Button
@@ -214,8 +225,10 @@ export default function ContactPageClient({ initialData }: ContactPageClientProp
                       onClick={() => {
                         setIsSuccess(false);
                         setMessage('');
+                        setPhone('');
                         setCustomName(null);
                         setCustomEmail(null);
+                        setServerMessage(null);
                       }}
                     >
                       Send Another Note
@@ -295,6 +308,23 @@ export default function ContactPageClient({ initialData }: ContactPageClientProp
                         onChange={(e) => setCustomEmail(e.target.value)}
                         placeholder="e.g. rachel@thomasbookkeeping.com"
                         className="w-full px-4 py-3 rounded-lg border border-[#D5CDC0] bg-[#FAF7F2] text-sm text-[#181918] focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#244634] transition-all"
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="contact-phone"
+                        className="block text-xs font-semibold text-[#181918] uppercase tracking-wider mb-2 font-mono"
+                      >
+                        Phone Number (Optional)
+                      </label>
+                      <input
+                        id="contact-phone"
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="e.g. +91 95389 13912"
+                        className="w-full px-4 py-3 rounded-lg border border-[#D5CDC0] bg-[#FAF7F2] text-sm text-[#181918] focus:bg-[#FFFFFF] focus:outline-none focus:ring-2 focus:ring-[#244634] transition-all font-mono"
                       />
                     </div>
 

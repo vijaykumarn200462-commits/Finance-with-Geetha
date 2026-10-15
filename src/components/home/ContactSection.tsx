@@ -23,6 +23,9 @@ export function ContactSection({ content, enabled = true }: ContactSectionProps)
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const [infoMessage, setInfoMessage] = useState<string | null>(null);
+  const [idempotencyKey, setIdempotencyKey] = useState(
+    () => 'inq_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10)
+  );
 
   if (enabled === false || (content && content.enabled === false)) {
     return null;
@@ -37,6 +40,7 @@ export function ContactSection({ content, enabled = true }: ContactSectionProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return; // Guard against double-clicks
     setIsSubmitting(true);
     setSuccessMessage(null);
     setInfoMessage(null);
@@ -65,6 +69,7 @@ export function ContactSection({ content, enabled = true }: ContactSectionProps)
     try {
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey,
       };
 
       if (currentUser) {
@@ -76,6 +81,7 @@ export function ContactSection({ content, enabled = true }: ContactSectionProps)
         method: 'POST',
         headers,
         body: JSON.stringify({
+          idempotencyKey,
           name: name.trim(),
           email: email.trim(),
           phone: phone.trim(),
@@ -96,11 +102,12 @@ export function ContactSection({ content, enabled = true }: ContactSectionProps)
         setInfoMessage(data.message || 'Your inquiry was saved successfully to our system.');
       }
 
-      // Reset form fields after successful save
+      // Reset form fields after successful save and regenerate key
       setName('');
       setPhone('');
       setEmail('');
       setMessage('');
+      setIdempotencyKey('inq_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.';
       setErrorMessage(msg);

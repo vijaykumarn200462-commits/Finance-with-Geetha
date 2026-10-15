@@ -104,6 +104,6 @@ export const DEFAULT_REVIEWS_SECTION_CONTENT: ReviewsSectionContent = {
   showGoogleRatingBadge: true,
   averageRating: 5.0,
   totalReviewsCount: 5,
-  autoAdvanceSeconds: 4.5,
+  autoAdvanceSeconds: 1,
   reviews: INITIAL_REVIEWS,
 };

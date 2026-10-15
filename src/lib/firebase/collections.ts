@@ -12,6 +12,7 @@ export const COLLECTIONS = {
   SITE_CONTENT: 'site_content',
   SETTINGS: 'settings',
   HOMEPAGE_REVIEWS: 'homepageReviews',
+  INQUIRY_IDEMPOTENCY: 'inquiry_idempotency',
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];

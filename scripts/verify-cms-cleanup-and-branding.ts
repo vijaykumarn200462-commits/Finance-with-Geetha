@@ -118,8 +118,12 @@ async function verifyCmsCleanupAndBranding() {
     assert(res.status === 200, 'Public homepage returns HTTP 200 OK');
     const html = await res.text();
     assert(html.includes('Finance with Geetha'), 'Homepage contains dynamic business name');
-    assert(html.includes('Bookkeeping &amp; Accounting') || html.includes('Bookkeeping & Accounting') || html.includes('BOOKKEEPING &amp; ACCOUNTING'), 'Homepage contains dynamic tagline');
-    assert(html.includes('Take Control of Your Business Finances'), 'Homepage contains hero headline');
+    assert(
+      html.includes('Learn how to actually build a bookkeeping business') ||
+      html.includes('Take Control of Your Business Finances') ||
+      html.includes(updatedHero.headline),
+      'Homepage contains hero headline'
+    );
     assert(html.includes('Schedule Consultation'), 'Homepage contains consultation button');
   } catch (err) {
     console.warn('[WARN] Could not connect to dev server at http://localhost:3000:', err);

@@ -18,6 +18,7 @@ import {
   Clock,
 } from 'lucide-react';
 import { ContactMessage, MessageStatus, EmailDeliveryStatus } from '@/types/message';
+import { auth } from '@/lib/firebase/client';
 
 export default function AdminMessagesClient() {
   const [messages, setMessages] = useState<ContactMessage[]>([]);
@@ -27,6 +28,7 @@ export default function AdminMessagesClient() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMessage, setSelectedMessage] = useState<ContactMessage | null>(null);
+  const [retryingEmailId, setRetryingEmailId] = useState<string | null>(null);
 
   const fetchMessages = async () => {
     setIsLoading(true);
@@ -112,6 +114,73 @@ export default function AdminMessagesClient() {
       }
     } catch (err) {
       console.error(err);
+    }
+  };
+
+  const handleRetryEmail = async (id: string) => {
+    setRetryingEmailId(id);
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (auth.currentUser) {
+        try {
+          const freshToken = await auth.currentUser.getIdToken(true);
+          if (freshToken) headers['Authorization'] = `Bearer ${freshToken}`;
+        } catch (tokenErr) {
+          console.warn('[Admin Messages] Could not refresh ID token:', tokenErr);
+        }
+      }
+
+      const res = await fetch('/api/admin/messages/retry', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json().catch(() => ({}));
+
+      // Update local state with latest delivery status returned by server (even on non-200)
+      const newStatus = data.emailDeliveryStatus || data.status;
+      if (newStatus) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === id
+              ? {
+                  ...m,
+                  emailDeliveryStatus: newStatus,
+                  emailDeliveryError: data.emailDeliveryError || data.error || null,
+                  emailDeliveryId: data.emailDeliveryId || data.deliveryId || null,
+                }
+              : m
+          )
+        );
+        if (selectedMessage && selectedMessage.id === id) {
+          setSelectedMessage((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  emailDeliveryStatus: newStatus,
+                  emailDeliveryError: data.emailDeliveryError || data.error || null,
+                  emailDeliveryId: data.emailDeliveryId || data.deliveryId || null,
+                }
+              : null
+          );
+        }
+      }
+
+      if (res.ok) {
+        alert(data.message || 'Notification email successfully sent!');
+      } else if (res.status === 401) {
+        alert('Your administrator session has expired. Please refresh the page or log in again.');
+      } else if (res.status === 403) {
+        alert('Access denied. Your account does not have administrator privileges.');
+      } else if (res.status === 503) {
+        alert(data.message || 'Email provider is not configured. Please set RESEND_API_KEY in the server environment.');
+      } else {
+        alert(data.message || data.error || 'Failed to retry email delivery.');
+      }
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : 'Network error while attempting to retry email delivery.');
+    } finally {
+      setRetryingEmailId(null);
     }
   };
 
@@ -440,6 +509,20 @@ export default function AdminMessagesClient() {
                       <p className="mt-1 text-[11px] text-rose-700 font-mono bg-white/70 p-1.5 rounded">
                         Error: {selectedMessage.emailDeliveryError}
                       </p>
+                    )}
+
+                    {selectedMessage.emailDeliveryStatus !== 'sent' && (
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          disabled={retryingEmailId === selectedMessage.id}
+                          onClick={() => handleRetryEmail(selectedMessage.id)}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-[#0f2c59] text-white hover:bg-[#138354] transition-colors disabled:opacity-50 cursor-pointer shadow-xs"
+                        >
+                          <RefreshCw className={`w-3.5 h-3.5 ${retryingEmailId === selectedMessage.id ? 'animate-spin' : ''}`} />
+                          <span>{retryingEmailId === selectedMessage.id ? 'Retrying Email...' : 'Retry Email Delivery'}</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>

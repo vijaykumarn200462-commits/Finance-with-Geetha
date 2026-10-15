@@ -964,10 +964,23 @@ export function useReviews(initial?: Partial<ReviewsSectionContent>): {
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
   }, [allReviews]);
 
+  const calculatedTotalReviewsCount = visibleReviews.length;
+  const calculatedAverageRating = useMemo(() => {
+    if (visibleReviews.length === 0) return 5.0;
+    const validRatings = visibleReviews
+      .map((r) => Number(r.rating))
+      .filter((r) => !isNaN(r) && r >= 1 && r <= 5);
+    if (validRatings.length === 0) return 5.0;
+    const sum = validRatings.reduce((acc, curr) => acc + curr, 0);
+    return Number((sum / validRatings.length).toFixed(1));
+  }, [visibleReviews]);
+
   return {
     content: {
       ...content,
       reviews: allReviews,
+      totalReviewsCount: calculatedTotalReviewsCount,
+      averageRating: calculatedAverageRating,
     },
     visibleReviews,
     loading,
